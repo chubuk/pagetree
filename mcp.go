@@ -59,7 +59,7 @@ func (e *Engine) AgentMCPHandler() http.Handler {
 			var err error
 			key, err = e.keystore.Authenticate(auth[7:])
 			if err != nil {
-				http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"invalid or revoked key"},"id":null}`, http.StatusUnauthorized)
+				http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"невалидный или отозванный ключ"},"id":null}`, http.StatusUnauthorized)
 				return
 			}
 		} else if auth != "" {
@@ -67,11 +67,11 @@ func (e *Engine) AgentMCPHandler() http.Handler {
 			var err error
 			key, err = e.keystore.Authenticate(auth)
 			if err != nil {
-				http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"invalid or revoked key"},"id":null}`, http.StatusUnauthorized)
+				http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"невалидный или отозванный ключ"},"id":null}`, http.StatusUnauthorized)
 				return
 			}
 		} else {
-			http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"missing bearer token"},"id":null}`, http.StatusUnauthorized)
+			http.Error(w, `{"jsonrpc":"2.0","error":{"code":-32001,"message":"отсутствует bearer token"},"id":null}`, http.StatusUnauthorized)
 			return
 		}
 		e.keystore.TouchKey(key.ID)
@@ -188,7 +188,7 @@ func (e *Engine) mcpListPages() server.ToolHandlerFunc {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		root := req.GetString("root", "pages")
 		if root != "pages" && root != "news" {
-			return mcp.NewToolResultError("root must be 'pages' or 'news'"), nil
+			return mcp.NewToolResultError("root должен быть 'pages' или 'news'"), nil
 		}
 		page := req.GetInt("page", 1)
 		perPage := req.GetInt("per_page", 20)
@@ -252,7 +252,7 @@ func (e *Engine) mcpSavePage() server.ToolHandlerFunc {
 			jd, _ := json.Marshal(rawJSON)
 			meta = &PageMeta{}
 			if err := json.Unmarshal(jd, meta); err != nil {
-				return mcp.NewToolResultError("invalid json metadata: " + err.Error()), nil
+				return mcp.NewToolResultError("невалидный JSON метаданных: " + err.Error()), nil
 			}
 		}
 		if err := e.store.WritePage(path, []byte(md), meta); err != nil {
@@ -354,10 +354,10 @@ func (e *Engine) mcpUploadMedia() server.ToolHandlerFunc {
 		// Decode + cap at 20MB
 		data, err := base64.StdEncoding.DecodeString(dataB64)
 		if err != nil {
-			return mcp.NewToolResultError("invalid base64 data"), nil
+			return mcp.NewToolResultError("невалидные base64-данные"), nil
 		}
 		if len(data) > 20<<20 {
-			return mcp.NewToolResultError(fmt.Sprintf("file too large: %d bytes (max 20MB)", len(data))), nil
+			return mcp.NewToolResultError(fmt.Sprintf("файл слишком большой: %d байт (макс. 20МБ)", len(data))), nil
 		}
 
 		// Extension allowlist (same as REST)
@@ -370,7 +370,7 @@ func (e *Engine) mcpUploadMedia() server.ToolHandlerFunc {
 		}
 		allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}
 		if !allowed[ext] {
-			return mcp.NewToolResultError(fmt.Sprintf("file type %q not allowed (want jpg/jpeg/png/webp/gif)", ext)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("тип файла %q не разрешён (допустимы jpg/jpeg/png/webp/gif)", ext)), nil
 		}
 
 		url, err := e.store.SaveMedia(dir, filename, data)

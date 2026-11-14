@@ -116,7 +116,7 @@ func (ks *KeyStore) flush() error {
 // GenerateKey creates a new API key and returns the raw key (shown once).
 func (ks *KeyStore) GenerateKey(name string, policy KeyPolicy) (*APIKey, string, error) {
 	if name == "" {
-		return nil, "", errors.New("name is required")
+		return nil, "", errors.New("имя обязательно")
 	}
 	// Validate policy
 	if err := validatePolicy(policy); err != nil {
@@ -157,7 +157,7 @@ func (ks *KeyStore) GenerateKey(name string, policy KeyPolicy) (*APIKey, string,
 // Authenticate validates a raw key and returns the matching record.
 func (ks *KeyStore) Authenticate(rawKey string) (*APIKey, error) {
 	if rawKey == "" {
-		return nil, errors.New("empty key")
+		return nil, errors.New("пустой ключ")
 	}
 	hash := sha256.Sum256([]byte(rawKey))
 	hashHex := hex.EncodeToString(hash[:])
@@ -171,14 +171,14 @@ func (ks *KeyStore) Authenticate(rawKey string) (*APIKey, error) {
 			continue
 		}
 		if k.RevokedAt != nil {
-			return nil, errors.New("key revoked")
+			return nil, errors.New("ключ отозван")
 		}
 		if k.ExpiresAt != nil && now.After(*k.ExpiresAt) {
-			return nil, errors.New("key expired")
+			return nil, errors.New("ключ истёк")
 		}
 		return k, nil
 	}
-	return nil, errors.New("invalid key")
+	return nil, errors.New("невалидный ключ")
 }
 
 // TouchKey updates last_used_at (throttled, async flush).
@@ -225,7 +225,7 @@ func (ks *KeyStore) GetKey(id string) (*APIKey, error) {
 	defer ks.mu.RUnlock()
 	k, ok := ks.keys[id]
 	if !ok {
-		return nil, fmt.Errorf("key %q not found", id)
+		return nil, fmt.Errorf("ключ %q не найден", id)
 	}
 	return k, nil
 }
@@ -241,7 +241,7 @@ func (ks *KeyStore) UpdateKey(id string, name string, policy *KeyPolicy) error {
 	defer ks.mu.Unlock()
 	k, ok := ks.keys[id]
 	if !ok {
-		return fmt.Errorf("key %q not found", id)
+		return fmt.Errorf("ключ %q не найден", id)
 	}
 	if name != "" {
 		k.Name = name
@@ -258,7 +258,7 @@ func (ks *KeyStore) RevokeKey(id string) error {
 	defer ks.mu.Unlock()
 	k, ok := ks.keys[id]
 	if !ok {
-		return fmt.Errorf("key %q not found", id)
+		return fmt.Errorf("ключ %q не найден", id)
 	}
 	now := time.Now().UTC()
 	k.RevokedAt = &now
@@ -270,7 +270,7 @@ func (ks *KeyStore) DeleteKey(id string) error {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 	if _, ok := ks.keys[id]; !ok {
-		return fmt.Errorf("key %q not found", id)
+		return fmt.Errorf("ключ %q не найден", id)
 	}
 	delete(ks.keys, id)
 	return ks.flush()
@@ -311,7 +311,7 @@ func validatePolicy(p KeyPolicy) error {
 		switch scope {
 		case "r", "rw", "w", "none":
 		default:
-			return fmt.Errorf("invalid scope %q for %s (want r/rw/w/none)", scope, name)
+			return fmt.Errorf("невалидный scope %q для %s (допустимы r/rw/w/none)", scope, name)
 		}
 	}
 	return nil
@@ -357,5 +357,5 @@ func decryptAES(data, key, prevKey []byte) ([]byte, error) {
 			return plain, nil
 		}
 	}
-	return nil, errors.New("decryption failed with all keys")
+	return nil, errors.New("расшифровка не удалась ни одним ключом")
 }

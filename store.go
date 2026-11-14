@@ -122,7 +122,7 @@ func (s *Store) resolveURL(urlPath string) (string, error) {
 	urlPath = strings.TrimPrefix(urlPath, "/")
 	urlPath = strings.TrimSuffix(urlPath, "/")
 	if urlPath == "" {
-		return "", errors.New("empty path")
+		return "", errors.New("пустой путь")
 	}
 	// Try direct file: <path>.md
 	direct := urlPath + ".md"
@@ -458,7 +458,7 @@ func (s *Store) SaveMedia(dir, filename string, data []byte) (string, error) {
 	// Sanitize filename
 	filename = sanitizeFilename(filename)
 	if filename == "" {
-		return "", errors.New("empty filename after sanitize")
+		return "", errors.New("пустое имя файла после санитизации")
 	}
 	abs := filepath.Join(s.root, filepath.FromSlash(dir), filename)
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {

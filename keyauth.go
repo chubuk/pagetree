@@ -24,18 +24,18 @@ func (e *Engine) KeyAuthMW(resource string, write bool) func(http.Handler) http.
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			auth := r.Header.Get("Authorization")
 			if !strings.HasPrefix(auth, "Bearer ") {
-				http.Error(w, `{"error":"missing bearer token"}`, http.StatusUnauthorized)
+				http.Error(w, `{"error":"отсутствует bearer token"}`, http.StatusUnauthorized)
 				return
 			}
 			rawKey := strings.TrimPrefix(auth, "Bearer ")
 			key, err := e.keystore.Authenticate(rawKey)
 			if err != nil {
-				http.Error(w, `{"error":"invalid or revoked key"}`, http.StatusUnauthorized)
+				http.Error(w, `{"error":"невалидный или отозванный ключ"}`, http.StatusUnauthorized)
 				return
 			}
 			// Policy check
 			if !CheckPolicy(key.Policy, resource, write) {
-				http.Error(w, `{"error":"insufficient permissions"}`, http.StatusForbidden)
+				http.Error(w, `{"error":"недостаточно прав"}`, http.StatusForbidden)
 				return
 			}
 			// Touch for audit

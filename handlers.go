@@ -18,7 +18,7 @@ import (
 func (e *Engine) pageHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "метод не поддерживается", http.StatusMethodNotAllowed)
 			return
 		}
 		rel := e.stripBase(r.URL.Path, "/pages")
@@ -48,7 +48,7 @@ func (e *Engine) pageHandler() http.Handler {
 		html, err := e.renderPage(p)
 		if err != nil {
 			e.log.Error("render page", "path", p.Path, "error", err)
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -60,7 +60,7 @@ func (e *Engine) pageHandler() http.Handler {
 func (e *Engine) newsHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "метод не поддерживается", http.StatusMethodNotAllowed)
 			return
 		}
 		rel := e.stripBase(r.URL.Path, "/news")
@@ -117,7 +117,7 @@ func (e *Engine) newsHandler() http.Handler {
 		}
 		html, err := e.renderPage(p)
 		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			http.Error(w, "внутренняя ошибка", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -129,7 +129,7 @@ func (e *Engine) newsHandler() http.Handler {
 func (e *Engine) menuHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "метод не поддерживается", http.StatusMethodNotAllowed)
 			return
 		}
 		menu := e.buildMenu()
@@ -142,7 +142,7 @@ func (e *Engine) menuHandler() http.Handler {
 func (e *Engine) mediaHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			http.Error(w, "метод не поддерживается", http.StatusMethodNotAllowed)
 			return
 		}
 		rel := e.stripBase(r.URL.Path, "/media")

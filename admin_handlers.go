@@ -31,7 +31,7 @@ func (e *Engine) contentAPI() http.Handler {
 func (e *Engine) adminList(w http.ResponseWriter, r *http.Request) {
 	root := r.URL.Query().Get("root")
 	if root != "pages" && root != "news" {
-		jsonError(w, "root must be pages or news", http.StatusBadRequest)
+		jsonError(w, "root должен быть pages или news", http.StatusBadRequest)
 		return
 	}
 	tree, err := e.store.ListTree(root)
@@ -47,7 +47,7 @@ func (e *Engine) adminList(w http.ResponseWriter, r *http.Request) {
 func (e *Engine) adminReadFile(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		jsonError(w, "path is required", http.StatusBadRequest)
+		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
 	clean, err := e.store.guard(path)
@@ -57,7 +57,7 @@ func (e *Engine) adminReadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	data, err := os.ReadFile(filepath.Join(e.store.root, filepath.FromSlash(clean)))
 	if err != nil {
-		jsonError(w, "file not found", http.StatusNotFound)
+		jsonError(w, "файл не найден", http.StatusNotFound)
 		return
 	}
 	// Return as JSON with content
@@ -82,18 +82,18 @@ func (e *Engine) adminWritePage(w http.ResponseWriter, r *http.Request) {
 		JSON json.RawMessage `json:"json"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid JSON body", http.StatusBadRequest)
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
 		return
 	}
 	if req.Path == "" {
-		jsonError(w, "path is required", http.StatusBadRequest)
+		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
 	var meta *PageMeta
 	if len(req.JSON) > 0 {
 		meta = &PageMeta{}
 		if err := json.Unmarshal(req.JSON, meta); err != nil {
-			jsonError(w, "invalid meta JSON: "+err.Error(), http.StatusBadRequest)
+			jsonError(w, "невалидный JSON метаданных: "+err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
@@ -109,7 +109,7 @@ func (e *Engine) adminWritePage(w http.ResponseWriter, r *http.Request) {
 func (e *Engine) adminDeletePage(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		jsonError(w, "path is required", http.StatusBadRequest)
+		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
 	if err := e.store.DeletePage(path); err != nil {
@@ -127,7 +127,7 @@ func (e *Engine) adminRenamePage(w http.ResponseWriter, r *http.Request) {
 		NewPath string `json:"new_path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid JSON body", http.StatusBadRequest)
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
 		return
 	}
 	if err := e.store.RenamePage(req.OldPath, req.NewPath); err != nil {
@@ -143,12 +143,12 @@ func (e *Engine) adminUpload(w http.ResponseWriter, r *http.Request) {
 	const maxSize = 20 << 20 // 20 MB
 	r.Body = http.MaxBytesReader(w, r.Body, maxSize)
 	if err := r.ParseMultipartForm(maxSize); err != nil {
-		jsonError(w, "file too large or invalid form", http.StatusBadRequest)
+		jsonError(w, "файл слишком большой или невалидная форма", http.StatusBadRequest)
 		return
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		jsonError(w, "file field is required", http.StatusBadRequest)
+		jsonError(w, "поле file обязательно", http.StatusBadRequest)
 		return
 	}
 	defer func() { _ = file.Close() }()
@@ -161,12 +161,12 @@ func (e *Engine) adminUpload(w http.ResponseWriter, r *http.Request) {
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}
 	if !allowed[ext] {
-		jsonError(w, fmt.Sprintf("file type %q not allowed (want jpg/jpeg/png/webp/gif)", ext), http.StatusBadRequest)
+		jsonError(w, fmt.Sprintf("тип файла %q не разрешён (допустимы jpg/jpeg/png/webp/gif)", ext), http.StatusBadRequest)
 		return
 	}
 	data, err := io.ReadAll(file)
 	if err != nil {
-		jsonError(w, "read file: "+err.Error(), http.StatusInternalServerError)
+		jsonError(w, "ошибка чтения файла: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 	url, err := e.store.SaveMedia(dir, header.Filename, data)
@@ -200,7 +200,7 @@ func (e *Engine) adminListMedia(w http.ResponseWriter, r *http.Request) {
 func (e *Engine) adminDeleteMedia(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
-		jsonError(w, "path is required", http.StatusBadRequest)
+		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
 	if err := e.store.DeleteMedia(path); err != nil {
@@ -218,7 +218,7 @@ func (e *Engine) adminRenameMedia(w http.ResponseWriter, r *http.Request) {
 		NewPath string `json:"new_path"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid JSON body", http.StatusBadRequest)
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
 		return
 	}
 	if err := e.store.RenameMedia(req.OldPath, req.NewPath); err != nil {
@@ -243,7 +243,7 @@ func (e *Engine) keysAPI() http.Handler {
 // adminListKeys returns all keys.
 func (e *Engine) adminListKeys(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
-		jsonError(w, "keystore not configured", http.StatusServiceUnavailable)
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
 		return
 	}
 	keys := e.keystore.ListKeys()
@@ -253,7 +253,7 @@ func (e *Engine) adminListKeys(w http.ResponseWriter, r *http.Request) {
 // adminCreateKey creates a new key.
 func (e *Engine) adminCreateKey(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
-		jsonError(w, "keystore not configured", http.StatusServiceUnavailable)
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
 		return
 	}
 	var req struct {
@@ -261,7 +261,7 @@ func (e *Engine) adminCreateKey(w http.ResponseWriter, r *http.Request) {
 		Policy KeyPolicy `json:"policy"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid JSON body", http.StatusBadRequest)
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
 		return
 	}
 	key, raw, err := e.keystore.GenerateKey(req.Name, req.Policy)
@@ -278,7 +278,7 @@ func (e *Engine) adminCreateKey(w http.ResponseWriter, r *http.Request) {
 // adminGetKey returns a key by ID.
 func (e *Engine) adminGetKey(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
-		jsonError(w, "keystore not configured", http.StatusServiceUnavailable)
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
 		return
 	}
 	id := r.PathValue("id")
@@ -293,7 +293,7 @@ func (e *Engine) adminGetKey(w http.ResponseWriter, r *http.Request) {
 // adminUpdateKey updates name/policy.
 func (e *Engine) adminUpdateKey(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
-		jsonError(w, "keystore not configured", http.StatusServiceUnavailable)
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
 		return
 	}
 	id := r.PathValue("id")
@@ -302,7 +302,7 @@ func (e *Engine) adminUpdateKey(w http.ResponseWriter, r *http.Request) {
 		Policy *KeyPolicy `json:"policy"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		jsonError(w, "invalid JSON body", http.StatusBadRequest)
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
 		return
 	}
 	if err := e.keystore.UpdateKey(id, req.Name, req.Policy); err != nil {
@@ -315,7 +315,7 @@ func (e *Engine) adminUpdateKey(w http.ResponseWriter, r *http.Request) {
 // adminDeleteKey revokes and deletes a key.
 func (e *Engine) adminDeleteKey(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
-		jsonError(w, "keystore not configured", http.StatusServiceUnavailable)
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
 		return
 	}
 	id := r.PathValue("id")
