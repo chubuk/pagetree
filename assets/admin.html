@@ -83,13 +83,23 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
   <a href="/shops">Магазины</a>
   <a href="/ai-keys">AI-ключи</a>
   <a href="/settings">Настройки</a>
-  <span class="topnav-sep"></span>
-  <a href="/admin/users">Админ</a>
-  <a href="/admin/server">Сервер</a>
-  <a href="/admin/backup">Бэкапы</a>
-  <a href="/admin/email">Почта</a>
-  <a href="/content/admin/" class="active">Страницы</a>
+  <span class="topnav-sep admin-link" style="display:none"></span>
+  <a href="/admin/users" class="admin-link" style="display:none">Админ</a>
+  <a href="/admin/server" class="admin-link" style="display:none">Сервер</a>
+  <a href="/admin/backup" class="admin-link" style="display:none">Бэкапы</a>
+  <a href="/admin/email" class="admin-link" style="display:none">Почта</a>
+  <a href="/content/admin/" class="admin-link active" style="display:none">Страницы</a>
 </nav>
+<script>
+(function(){
+  var role = localStorage.getItem('role');
+  if (role === 'admin' || role === 'super_admin') {
+    document.querySelectorAll('.topnav .admin-link').forEach(function(el){
+      el.style.display = '';
+    });
+  }
+})();
+</script>
 
 <div class="toolbar">
   <button onclick="app.newPage('pages')">📄 Новая страница</button>
