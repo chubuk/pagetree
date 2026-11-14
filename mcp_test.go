@@ -2,8 +2,10 @@ package pagetree
 
 import (
 	"encoding/base64"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -132,5 +134,48 @@ func mkdir(t *testing.T, root, name string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(root, name), 0o755); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestAdminUIHandlerServes(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"pages", "news", "media"} {
+		os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	eng, err := New(Config{
+		Root:     root,
+		DataDir:  t.TempDir(),
+		Renderer: &stubRenderer{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := eng.AdminUIHandler()
+
+	// Test index page at mount root
+	req := httptest.NewRequest("GET", "/content/admin/", nil)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Errorf("GET /content/admin/ = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "PageTree") {
+		t.Error("admin.html not served")
+	}
+
+	// Test static asset
+	req2 := httptest.NewRequest("GET", "/content/admin/contentadmin.js", nil)
+	rec2 := httptest.NewRecorder()
+	handler.ServeHTTP(rec2, req2)
+	if rec2.Code != 200 {
+		t.Errorf("GET /content/admin/contentadmin.js = %d, want 200", rec2.Code)
+	}
+
+	// Test Vditor CSS (subdirectory)
+	req3 := httptest.NewRequest("GET", "/content/admin/vditor/index.css", nil)
+	rec3 := httptest.NewRecorder()
+	handler.ServeHTTP(rec3, req3)
+	if rec3.Code != 200 {
+		t.Errorf("GET /content/admin/vditor/index.css = %d, want 200", rec3.Code)
 	}
 }

@@ -351,22 +351,21 @@ func (e *Engine) agentAPI() http.Handler {
 // --- Admin UI (embedded assets) ---
 
 func (e *Engine) adminUIHandler() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+	sub := http.StripPrefix("/content/admin", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if path == "/" || path == "" || path == "/index.html" {
 			data, _ := assetsFS.ReadFile("assets/admin.html")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			_, _ = w.Write(data)
 			return
 		}
-		// Serve static assets
-		rel := "assets" + r.URL.Path
+		rel := "assets" + path
 		data, err := assetsFS.ReadFile(rel)
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
-		ext := filepath.Ext(r.URL.Path)
+		ext := filepath.Ext(path)
 		switch ext {
 		case ".css":
 			w.Header().Set("Content-Type", "text/css")
@@ -379,8 +378,8 @@ func (e *Engine) adminUIHandler() http.Handler {
 		}
 		w.Header().Set("Cache-Control", "public, max-age=3600")
 		_, _ = w.Write(data)
-	})
-	return mux
+	}))
+	return sub
 }
 
 // --- JSON helpers ---
