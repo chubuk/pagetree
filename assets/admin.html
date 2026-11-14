@@ -8,6 +8,12 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;background:#f5f5f5}
+.topnav{background:#1a237e;padding:.5rem 1rem;display:flex;gap:.25rem;align-items:center;flex-wrap:wrap}
+.topnav a{color:rgba(255,255,255,.85);text-decoration:none;padding:.35rem .75rem;border-radius:4px;font-size:.85rem;white-space:nowrap}
+.topnav a:hover{background:rgba(255,255,255,.15);color:#fff}
+.topnav a.active{background:rgba(255,255,255,.25);color:#fff;font-weight:600}
+.topnav-brand{font-weight:700;font-size:.95rem;color:#fff!important;margin-right:.5rem}
+.topnav-sep{width:1px;height:1.25rem;background:rgba(255,255,255,.3);margin:0 .5rem}
 .toolbar{background:#fff;border-bottom:1px solid #ddd;padding:.5rem 1rem;display:flex;gap:.5rem;align-items:center}
 .toolbar button{padding:.4rem .8rem;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:.85rem}
 .toolbar button:hover{background:#f0f0f0}
@@ -70,6 +76,20 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
 </style>
 </head>
 <body>
+
+<nav class="topnav">
+  <a href="/dashboard" class="topnav-brand">MCP IS</a>
+  <a href="/dashboard">Панель</a>
+  <a href="/shops">Магазины</a>
+  <a href="/ai-keys">AI-ключи</a>
+  <a href="/settings">Настройки</a>
+  <span class="topnav-sep"></span>
+  <a href="/admin/users">Админ</a>
+  <a href="/admin/server">Сервер</a>
+  <a href="/admin/backup">Бэкапы</a>
+  <a href="/admin/email">Почта</a>
+  <a href="/content/admin/" class="active">Страницы</a>
+</nav>
 
 <div class="toolbar">
   <button onclick="app.newPage('pages')">📄 Новая страница</button>

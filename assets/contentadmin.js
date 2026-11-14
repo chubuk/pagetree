@@ -44,6 +44,8 @@
     vditor = new Vditor('vditor', {
       height: '100%',
       mode: 'ir',
+      lang: 'ru_RU',
+      cdn: '/content/admin/vditor',
       toolbar: [
         'emoji', 'headings', 'bold', 'italic', 'strike', '|',
         'line', 'quote', 'list', 'ordered-list', 'check', '|',
