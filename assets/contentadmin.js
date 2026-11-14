@@ -67,9 +67,24 @@
           showStatus('Ошибка загрузки: ' + msg, false);
         }
       },
+      preview: { markdown: { sanitize: true } },
       cache: { enable: false },
       input(val) { markDirty(); },
     });
+    // Paste sanitization via DOMPurify (belt-and-suspenders beyond lute sanitize)
+    setTimeout(() => {
+      const el = document.querySelector('.vditor-content [contenteditable], .vditor-wysiwyg [contenteditable], .vditor-ir [contenteditable]');
+      if (el && window.DOMPurify) {
+        el.addEventListener('paste', (e) => {
+          const html = e.clipboardData.getData('text/html');
+          if (html) {
+            e.preventDefault();
+            const clean = window.DOMPurify.sanitize(html, { ALLOWED_TAGS: ['b','i','em','strong','a','ul','ol','li','p','br','h1','h2','h3','h4','h5','h6','code','pre','blockquote','table','thead','tbody','tr','th','td','hr','img'], ALLOWED_ATTR: ['href','src','alt','title','class'] });
+            document.execCommand('insertHTML', false, clean);
+          }
+        }, true);
+      }
+    }, 500);
   }
 
   // --- File tree ---

@@ -12,7 +12,7 @@ import (
 func TestSmokeRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	for _, d := range []string{"pages", "news", "media"} {
-		os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
 	}
 	dataDir := t.TempDir()
 

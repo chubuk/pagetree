@@ -140,7 +140,7 @@ func mkdir(t *testing.T, root, name string) {
 func TestAdminUIHandlerServes(t *testing.T) {
 	root := t.TempDir()
 	for _, d := range []string{"pages", "news", "media"} {
-		os.MkdirAll(filepath.Join(root, d), 0o755)
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
 	}
 	eng, err := New(Config{
 		Root:     root,
