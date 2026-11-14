@@ -1,8 +1,10 @@
 # PageTree
 
-Embeddable file-based markdown page/news engine for Go. Pages and news are `.md` files with sidecar `.json` metadata; URL = directory nesting. No database — files are the source of truth.
+[Русский](README.md) | [English](README.en.md)
 
-## Quick start
+Файловый движок markdown-страниц и новостей для Go. Страницы — `.md` файлы с sidecar `.json`; URL = вложенность папок. Без БД — файлы являются источником истины.
+
+## Быстрый старт
 
 ```go
 package main
@@ -17,48 +19,62 @@ func main() {
         Root:     "./content",   // pages/, news/, media/
         DataDir:  "./data",      // keys.json, robots.txt
         SiteURL:  "https://site.ru",
-        Renderer: myMDRenderer,  // any pagetree.Renderer impl
+        Renderer: myMDRenderer,  // любая реализация pagetree.Renderer
     })
 
-    // Public routes — no auth
+    // Публичные маршруты — без авторизации
     http.Handle("GET /pages/", engine.PageHandler())
     http.Handle("GET /news/", engine.NewsHandler())
     http.Handle("GET /media/", engine.MediaHandler())
     http.Handle("GET /api/content/menu", engine.MenuHandler())
 
-    // Admin — wrap with your auth middleware
+    // Админка — обернуть своей auth middleware
     http.Handle("/api/admin/content/", myAuthMW(engine.ContentAPI()))
     http.Handle("/api/admin/content/keys/", myAuthMW(engine.KeysAPI()))
     http.Handle("/content/admin/", engine.AdminUIHandler())
 
-    // Agent API — Bearer ptk_* keys (module-owned auth)
+    // Agent API — REST (Bearer ptk_*)
     http.Handle("/api/agent/v1/", engine.AgentAPI())
+
+    // Agent API — MCP (JSON-RPC 2.0, Bearer ptk_*)
+    http.Handle("/api/agent/mcp", engine.AgentMCPHandler())
 
     http.ListenAndServe(":8080", nil)
 }
 ```
 
-## Content structure
+## Два API для агентов
+
+| | REST (`/api/agent/v1/`) | MCP (`/api/agent/mcp`) |
+|---|---|---|
+| Протокол | HTTP + JSON | JSON-RPC 2.0 (Streamable HTTP) |
+| Клиенты | curl, fetch, LangChain | Claude Desktop, MiMoCode, Cursor |
+| Обнаружение операций | По документации | `tools/list` (автоматически) |
+| Формат | URL+метод = операция | `tools/call` с именем тула |
+
+Оба API работают параллельно с одинаковой авторизацией (Bearer `ptk_*`) и одинаковыми правами (policy per key).
+
+## Структура контента
 
 ```
 content/
   pages/
     about.md              → /pages/about
-    about.json            # sidecar metadata
-    about_media/          # page-specific images
+    about.json            # метаданные
+    about_media/          # картинки страницы
       photo.jpg
     docs/
       install.md          → /pages/docs/install
       install.json
-      section.json        # folder metadata (title, order, menu)
+      section.json        # метаданные папки (title, order, menu)
   news/
     releases/
       v1.2.md             → /news/releases/v1.2
       v1.2.json           # {date: "2026-11-01", ...}
-  media/                  # shared images
+  media/                  # общие картинки
 ```
 
-## Sidecar JSON schema
+## Sidecar JSON
 
 ```json
 {
@@ -70,72 +86,64 @@ content/
   "draft": false,
   "seo": {
     "meta_title": "О нас — компания N",
-    "meta_description": "Краткое описание для поисковиков",
+    "meta_description": "Краткое описание",
     "robots": "index, follow",
-    "og_title": "О нас",
-    "og_description": "Описание для соцсетей",
     "og_image": "/media/og-about.jpg",
-    "og_type": "website",
-    "twitter_card": "summary_large_image",
-    "canonical": "https://site/pages/about",
-    "breadcrumb_title": "О компании"
+    "canonical": "https://site/pages/about"
   }
 }
 ```
 
-## Sidecar lifecycle
+Подробнее: [docs/CONTENT.md](docs/CONTENT.md)
 
-- `.md` without `.json` → valid: defaults (`title` from first H1, `menu:false`, `draft:false`)
-- `.json` without `.md` → orphan: visible in admin tree, not rendered
-- rename/delete → atomic on triple (md + json + `_media/`)
-- save → atomic `{md, json}` write via tmp+rename
-
-## AI keys (agent access)
+## AI-ключи (доступ агентов)
 
 ```go
-// Create key (raw shown once)
 key, raw, _ := engine.KeyStore().GenerateKey("agent", pagetree.KeyPolicy{
     Pages: "rw", News: "r", Media: "w",
 })
-// raw = "ptk_live_<64hex>" — save it, can't retrieve later
-
-// Authenticate (done automatically by AgentAPI middleware)
-key, _ := engine.KeyStore().Authenticate(raw)
+// raw = "ptk_live_<64hex>" — сохраните, повторно получить нельзя
 ```
 
-Key format: `ptk_live_<64hex>`. Stored as SHA-256 hash (hash-then-store). Optional AES-256-GCM encryption of `keys.json` via `Config.MasterKey`.
+Формат: `ptk_live_<64hex>`. Хранится как SHA-256 хэш. Опционально AES-256-GCM шифрование `keys.json`. Подробнее: [docs/SECURITY.md](docs/SECURITY.md)
 
-Policy scopes: `r` (read), `w` (write), `rw` (read+write), `none` (denied) per resource.
+## MCP-тулы (13 операций)
 
-## Security
+| Тул | Описание | Scope |
+|---|---|---|
+| `list_pages` / `get_page` | Чтение страниц | pages:read |
+| `save_page` / `delete_page` / `rename_page` | Запись страниц | pages:write |
+| `list_news` / `get_news` | Чтение новостей | news:read |
+| `save_news` / `delete_news` | Запись новостей | news:write |
+| `list_media` / `upload_media` / `delete_media` | Картинки | media:read / media:write |
+| `get_menu` | Меню сайта | pages:read |
 
-- Path guard: `filepath.Clean` + prefix check + symlink evaluation
-- Upload allowlist: `jpg/jpeg/png/webp/gif` only (no HTML/SVG — prevents stored XSS)
-- Filename sanitize: `[a-z0-9._-]`, lowercase
-- HTML sanitizer at render: allowlist tags/attrs, scheme allowlist for src/href (no `javascript:`, `data:`, `//`)
-- Key comparison: `crypto/subtle.ConstantTimeCompare`
-- Keys file: `0600` permissions, atomic writes
+Подробнее: [docs/MCP.md](docs/MCP.md)
 
-## SEO output
+## SEO
 
-Automatically generated in `<head>`: title, meta description, robots, canonical, Open Graph, Twitter Card, JSON-LD (Article + BreadcrumbList), `<link rel="alternate" type="text/markdown">`. Also: `sitemap.xml`, `llms.txt`, `robots.txt` (editable).
+Автоматически в `<head>`: title, description, robots, canonical, Open Graph, Twitter Card, JSON-LD (Article + BreadcrumbList), `<link rel="alternate" type="text/markdown">`. Плюс `sitemap.xml`, `llms.txt`, `robots.txt`. Подробнее: [docs/SEO.md](docs/SEO.md)
 
-Breadcrumbs: auto from directory nesting with editable names via `section.json` and `seo.breadcrumb_title`.
+## Безопасность
 
-## Custom renderer
+- Path guard: `filepath.Clean` + prefix check + symlink
+- Upload allowlist: `jpg/jpeg/png/webp/gif` (без HTML/SVG — предотвращает stored XSS)
+- HTML sanitizer: allowlist тегов/атрибутов, scheme allowlist для src/href
+- Ключи: `crypto/subtle.ConstantTimeCompare`, SHA-256 hash-then-store
 
-```go
-type myRenderer struct{}
+## Документация
 
-func (r *myRenderer) Render(md []byte) ([]byte, error) {
-    // Use any md→HTML library (gomarkdown, goldmark, etc.)
-    return myMDToHTML(md), nil
-}
-```
+| Файл | Содержимое |
+|---|---|
+| [docs/API.md](docs/API.md) | Полный REST API |
+| [docs/MCP.md](docs/MCP.md) | MCP-эндпоинт (JSON-RPC 2.0) |
+| [docs/CONTENT.md](docs/CONTENT.md) | Формат контента и жизненный цикл |
+| [docs/SECURITY.md](docs/SECURITY.md) | Модель безопасности |
+| [docs/SEO.md](docs/SEO.md) | SEO-пакет |
 
-## Testing
+## Тесты
 
 ```bash
-go test ./...         # 33 tests: store, render, keystore, smoke
+go test ./...    # 37 тестов
 go vet ./...
 ```
