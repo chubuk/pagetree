@@ -101,11 +101,21 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
 </nav>
 <script>
 (function(){
+  // Доступ к редактору — только admin/super_admin (та же логика, что role-роутинг SPA)
   var role = localStorage.getItem('role');
+  if (!role) {
+    try {
+      var raw = (localStorage.getItem('token') || '').split('.')[1] || '';
+      var b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+      role = (JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4))) || {}).role || '';
+    } catch (e) { role = ''; }
+  }
   if (role === 'admin' || role === 'super_admin') {
     document.querySelectorAll('.header .admin-link').forEach(function(el){
       el.style.display = '';
     });
+  } else {
+    window.location.replace('/dashboard');
   }
 })();
 </script>
