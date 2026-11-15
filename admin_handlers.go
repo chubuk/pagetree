@@ -6,11 +6,31 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
 
 // --- Admin: Content CRUD (consumer wraps with auth) ---
+
+// guardPaths enforces key path-scope (KeyPolicy.Paths) for agent calls.
+// Admin JWT calls have no key in context → skipped. Writes 403 and returns false on violation.
+func guardPaths(w http.ResponseWriter, r *http.Request, paths ...string) bool {
+	key := KeyFromContext(r.Context())
+	if key == nil {
+		return true
+	}
+	for _, p := range paths {
+		if p == "" {
+			continue
+		}
+		if !PathAllowed(key.Policy, p) {
+			jsonError(w, fmt.Sprintf("путь %q вне разрешённых префиксов ключа", p), http.StatusForbidden)
+			return false
+		}
+	}
+	return true
+}
 
 func (e *Engine) contentAPI() http.Handler {
 	mux := http.NewServeMux()
@@ -48,12 +68,18 @@ func (e *Engine) adminList(w http.ResponseWriter, r *http.Request) {
 func (e *Engine) adminReadFile(w http.ResponseWriter, r *http.Request) {
 	path := r.URL.Query().Get("path")
 	if path == "" {
+		path = r.PathValue("path") // agent REST: GET /pages/{path...}
+	}
+	if path == "" {
 		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
 	clean, err := e.store.guard(path)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if !guardPaths(w, r, clean) {
 		return
 	}
 	data, err := os.ReadFile(filepath.Join(e.store.root, filepath.FromSlash(clean)))
@@ -88,6 +114,9 @@ func (e *Engine) adminWritePage(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.Path == "" {
 		jsonError(w, "path обязателен", http.StatusBadRequest)
+		return
+	}
+	if !guardPaths(w, r, req.Path) {
 		return
 	}
 	var meta *PageMeta
@@ -142,6 +171,9 @@ func (e *Engine) adminDeletePage(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
+	if !guardPaths(w, r, path) {
+		return
+	}
 	if err := e.store.DeletePage(path); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -158,6 +190,9 @@ func (e *Engine) adminRenamePage(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
+		return
+	}
+	if !guardPaths(w, r, req.OldPath, req.NewPath) {
 		return
 	}
 	if err := e.store.RenamePage(req.OldPath, req.NewPath); err != nil {
@@ -187,6 +222,9 @@ func (e *Engine) adminUpload(w http.ResponseWriter, r *http.Request) {
 	if dir == "" {
 		dir = "media"
 	}
+	if !guardPaths(w, r, path.Join(dir, header.Filename)) {
+		return
+	}
 	// Check extension allowlist
 	ext := strings.ToLower(filepath.Ext(header.Filename))
 	allowed := map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true, ".gif": true}
@@ -214,6 +252,9 @@ func (e *Engine) adminListMedia(w http.ResponseWriter, r *http.Request) {
 	if path == "" {
 		path = "media"
 	}
+	if !guardPaths(w, r, path) {
+		return
+	}
 	files, err := e.store.ListMedia(path)
 	if err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
@@ -233,6 +274,9 @@ func (e *Engine) adminDeleteMedia(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "path обязателен", http.StatusBadRequest)
 		return
 	}
+	if !guardPaths(w, r, path) {
+		return
+	}
 	if err := e.store.DeleteMedia(path); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -249,6 +293,9 @@ func (e *Engine) adminRenameMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
+		return
+	}
+	if !guardPaths(w, r, req.OldPath, req.NewPath) {
 		return
 	}
 	if err := e.store.RenameMedia(req.OldPath, req.NewPath); err != nil {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"path"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -33,6 +34,56 @@ var mcpPolicyMap = map[string]policyCheck{
 	"upload_media": {"media", true},
 	"delete_media": {"media", true},
 	"get_menu":     {"pages", false},
+}
+
+// policyGuard enforces the key's policy on every MCP tool call (fail-closed).
+// Also enforces path-scope (KeyPolicy.Paths) on path-like arguments.
+func (e *Engine) policyGuard(h server.ToolHandlerFunc) server.ToolHandlerFunc {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		name := req.Params.Name
+		pc, ok := mcpPolicyMap[name]
+		if !ok {
+			return mcp.NewToolResultError("инструмент " + name + " не имеет политики доступа"), nil
+		}
+		key := KeyFromContext(ctx)
+		if key == nil {
+			return mcp.NewToolResultError("нет аутентифицированного ключа"), nil
+		}
+		if !CheckPolicy(key.Policy, pc.resource, pc.write) {
+			access := "чтение"
+			if pc.write {
+				access = "запись"
+			}
+			return mcp.NewToolResultError(fmt.Sprintf("недостаточно прав: инструмент %q требует %s ресурса %q", name, access, pc.resource)), nil
+		}
+		for _, p := range argPaths(req.GetArguments()) {
+			if !PathAllowed(key.Policy, p) {
+				return mcp.NewToolResultError(fmt.Sprintf("путь %q вне разрешённых префиксов ключа", p)), nil
+			}
+		}
+		return h(ctx, req)
+	}
+}
+
+// argPaths extracts path-like arguments for path-scope checks.
+func argPaths(args map[string]any) []string {
+	var out []string
+	for _, k := range []string{"path", "old_path", "new_path"} {
+		if s, ok := args[k].(string); ok && s != "" {
+			out = append(out, s)
+		}
+	}
+	dir, _ := args["dir"].(string)
+	fn, _ := args["filename"].(string)
+	switch {
+	case dir != "" && fn != "":
+		out = append(out, path.Join(dir, fn))
+	case dir != "":
+		out = append(out, dir)
+	case fn != "":
+		out = append(out, fn)
+	}
+	return out
 }
 
 // AgentMCPHandler returns an http.Handler serving the MCP endpoint.
@@ -80,10 +131,13 @@ func (e *Engine) AgentMCPHandler() http.Handler {
 	})
 }
 
-// registerMCPTools registers all 13 MCP tools.
+// registerMCPTools registers all 13 MCP tools (each wrapped in policyGuard).
 func (e *Engine) registerMCPTools(s *server.MCPServer) {
+	add := func(tool mcp.Tool, h server.ToolHandlerFunc) {
+		s.AddTool(tool, e.policyGuard(h))
+	}
 	// === PAGES ===
-	s.AddTool(mcp.NewTool("list_pages",
+	add(mcp.NewTool("list_pages",
 		mcp.WithDescription("List pages tree from content directory. Returns items with path, url, title, draft status."),
 		mcp.WithString("root", mcp.Description("Root directory: 'pages' or 'news' (default: pages)")),
 		mcp.WithNumber("page", mcp.Description("Page number (default 1)"), mcp.DefaultNumber(1)),
@@ -91,13 +145,13 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpListPages())
 
-	s.AddTool(mcp.NewTool("get_page",
+	add(mcp.NewTool("get_page",
 		mcp.WithDescription("Read a page: returns markdown content and metadata (title, menu, order, date, seo)."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path relative to content root, e.g. 'pages/about.md'")),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpGetPage("pages"))
 
-	s.AddTool(mcp.NewTool("save_page",
+	add(mcp.NewTool("save_page",
 		mcp.WithDescription("Save a page atomically (md + json sidecar). Creates or overwrites."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'pages/about.md'")),
 		mcp.WithString("md", mcp.Required(), mcp.Description("Markdown content")),
@@ -106,14 +160,14 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 		mcp.WithDestructiveHintAnnotation(false),
 	), e.mcpSavePage())
 
-	s.AddTool(mcp.NewTool("delete_page",
+	add(mcp.NewTool("delete_page",
 		mcp.WithDescription("Delete a page triple: .md, .json, and _media/ directory."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'pages/about.md'")),
 		mcp.WithReadOnlyHintAnnotation(false),
 		mcp.WithDestructiveHintAnnotation(true),
 	), e.mcpDeletePage())
 
-	s.AddTool(mcp.NewTool("rename_page",
+	add(mcp.NewTool("rename_page",
 		mcp.WithDescription("Rename a page triple: .md, .json, and _media/ directory move together."),
 		mcp.WithString("old_path", mcp.Required(), mcp.Description("Current path, e.g. 'pages/about.md'")),
 		mcp.WithString("new_path", mcp.Required(), mcp.Description("New path, e.g. 'pages/company.md'")),
@@ -122,20 +176,20 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 	), e.mcpRenamePage())
 
 	// === NEWS ===
-	s.AddTool(mcp.NewTool("list_news",
+	add(mcp.NewTool("list_news",
 		mcp.WithDescription("List news entries. Returns items with path, url, title, date."),
 		mcp.WithNumber("page", mcp.Description("Page number (default 1)"), mcp.DefaultNumber(1)),
 		mcp.WithNumber("per_page", mcp.Description("Items per page (default 20)"), mcp.DefaultNumber(20)),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpListNews())
 
-	s.AddTool(mcp.NewTool("get_news",
+	add(mcp.NewTool("get_news",
 		mcp.WithDescription("Read a news entry: returns markdown content and metadata."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'news/releases/v1.2.md'")),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpGetPage("news"))
 
-	s.AddTool(mcp.NewTool("save_news",
+	add(mcp.NewTool("save_news",
 		mcp.WithDescription("Save a news entry atomically (md + json sidecar). Date field is important for blog ordering."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'news/releases/v1.2.md'")),
 		mcp.WithString("md", mcp.Required(), mcp.Description("Markdown content")),
@@ -144,7 +198,7 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 		mcp.WithDestructiveHintAnnotation(false),
 	), e.mcpSavePage())
 
-	s.AddTool(mcp.NewTool("delete_news",
+	add(mcp.NewTool("delete_news",
 		mcp.WithDescription("Delete a news entry triple: .md, .json, and _media/ directory."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'news/releases/v1.2.md'")),
 		mcp.WithReadOnlyHintAnnotation(false),
@@ -152,13 +206,13 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 	), e.mcpDeletePage())
 
 	// === MEDIA ===
-	s.AddTool(mcp.NewTool("list_media",
+	add(mcp.NewTool("list_media",
 		mcp.WithDescription("List media files in a directory. Returns name, url, size, mtime."),
 		mcp.WithString("dir", mcp.Description("Directory path (default: 'media')")),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpListMedia())
 
-	s.AddTool(mcp.NewTool("upload_media",
+	add(mcp.NewTool("upload_media",
 		mcp.WithDescription("Upload a media file (jpg/jpeg/png/webp/gif). Returns the root-relative URL."),
 		mcp.WithString("filename", mcp.Required(), mcp.Description("Filename with extension, e.g. 'photo.jpg'")),
 		mcp.WithString("data", mcp.Required(), mcp.Description("File content as base64 string (max 20MB decoded)")),
@@ -167,7 +221,7 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 		mcp.WithDestructiveHintAnnotation(false),
 	), e.mcpUploadMedia())
 
-	s.AddTool(mcp.NewTool("delete_media",
+	add(mcp.NewTool("delete_media",
 		mcp.WithDescription("Delete a media file."),
 		mcp.WithString("path", mcp.Required(), mcp.Description("File path, e.g. 'media/photo.jpg'")),
 		mcp.WithReadOnlyHintAnnotation(false),
@@ -175,7 +229,7 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 	), e.mcpDeleteMedia())
 
 	// === MENU ===
-	s.AddTool(mcp.NewTool("get_menu",
+	add(mcp.NewTool("get_menu",
 		mcp.WithDescription("Get site menu as JSON: pages with menu=true (sorted by order) and news sections with counts."),
 		mcp.WithReadOnlyHintAnnotation(true),
 	), e.mcpGetMenu())

@@ -11,7 +11,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,9 +33,29 @@ type APIKey struct {
 
 // KeyPolicy — per-key access policy.
 type KeyPolicy struct {
-	Pages string `json:"pages"` // "r", "rw", "w", "none"
-	News  string `json:"news"`
-	Media string `json:"media"`
+	Pages string   `json:"pages"`           // "r", "rw", "w", "none"
+	News  string   `json:"news"`
+	Media string   `json:"media"`
+	Paths []string `json:"paths,omitempty"` // префиксы путей (пусто = без ограничений)
+}
+
+// PathAllowed reports whether p is inside policy.Paths (empty allowlist = allow all).
+// Prefixes match the path itself or anything below it ("pages/blog" covers "pages/blog/x.md").
+func PathAllowed(policy KeyPolicy, p string) bool {
+	if len(policy.Paths) == 0 {
+		return true
+	}
+	clean := strings.TrimPrefix(path.Clean("/"+p), "/")
+	for _, pref := range policy.Paths {
+		pref = strings.Trim(path.Clean("/"+pref), "/")
+		if pref == "" {
+			return true
+		}
+		if clean == pref || strings.HasPrefix(clean, pref+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // KeyStore — in-memory canonical key state + file persistence.
@@ -312,6 +334,14 @@ func validatePolicy(p KeyPolicy) error {
 		case "r", "rw", "w", "none":
 		default:
 			return fmt.Errorf("невалидный scope %q для %s (допустимы r/rw/w/none)", scope, name)
+		}
+	}
+	for _, pref := range p.Paths {
+		if strings.Contains(pref, "..") {
+			return fmt.Errorf("невалидный префикс пути %q (.. запрещены)", pref)
+		}
+		if strings.Trim(pref, "/ ") == "" {
+			return fmt.Errorf("пустой префикс пути в paths")
 		}
 	}
 	return nil
