@@ -200,6 +200,20 @@ func TestSectionListingAndBreadcrumbs(t *testing.T) {
 	if rec404.Code != 404 {
 		t.Errorf("GET /pages/nope = %d, want 404", rec404.Code)
 	}
+
+	// PUT /section — сохранение секции через admin API (не через PUT /page)
+	apiH := eng.ContentAPI()
+	secBody := strings.NewReader(`{"path":"pages/docs","json":{"title":"Документация v2","order":5,"menu":true}}`)
+	req := httptest.NewRequest("PUT", "/section", secBody)
+	recSec := httptest.NewRecorder()
+	apiH.ServeHTTP(recSec, req)
+	if recSec.Code != 200 {
+		t.Fatalf("PUT /section = %d, want 200: %s", recSec.Code, recSec.Body.String())
+	}
+	sec, _ := eng.store.ReadSection("pages/docs")
+	if sec.Title != "Документация v2" || sec.Order != 5 || !sec.Menu {
+		t.Errorf("section = %+v, want {Документация v2 5 true}", sec)
+	}
 }
 
 type stubRenderer struct{}

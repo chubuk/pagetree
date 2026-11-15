@@ -17,6 +17,7 @@ func (e *Engine) contentAPI() http.Handler {
 	mux.HandleFunc("GET /list", e.adminList)
 	mux.HandleFunc("GET /file", e.adminReadFile)
 	mux.HandleFunc("PUT /page", e.adminWritePage)
+	mux.HandleFunc("PUT /section", e.adminWriteSection)
 	mux.HandleFunc("POST /upload", e.adminUpload)
 	mux.HandleFunc("POST /rename", e.adminRenamePage)
 	mux.HandleFunc("DELETE /page", e.adminDeletePage)
@@ -99,6 +100,35 @@ func (e *Engine) adminWritePage(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := e.store.WritePage(req.Path, []byte(req.MD), meta); err != nil {
 		jsonError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, map[string]any{"ok": true, "path": req.Path})
+}
+
+// adminWriteSection saves section.json for a directory.
+// PUT /api/admin/content/section  {"path":"pages/docs","json":{"title":"...","order":1,"menu":true}}
+func (e *Engine) adminWriteSection(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Path string          `json:"path"`
+		JSON json.RawMessage `json:"json"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "невалидный JSON-запрос", http.StatusBadRequest)
+		return
+	}
+	if req.Path == "" {
+		jsonError(w, "path обязателен", http.StatusBadRequest)
+		return
+	}
+	sec := &SectionMeta{}
+	if len(req.JSON) > 0 {
+		if err := json.Unmarshal(req.JSON, sec); err != nil {
+			jsonError(w, "невалидный JSON секции: "+err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if err := e.store.WriteSection(req.Path, sec); err != nil {
+		jsonError(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	jsonOK(w, map[string]any{"ok": true, "path": req.Path})

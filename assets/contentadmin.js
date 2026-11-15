@@ -174,6 +174,7 @@
         const meta = await api('GET', '/file?path=' + encodeURIComponent(jsonPath));
         setMeta(JSON.parse(meta.content));
       } catch { setMeta({}); }
+      loadSectionForm(currentPath.replace(/\/[^/]+\.md$/, ''));
       loadTree();
     } catch (e) {
       showStatus('Ошибка открытия: ' + e.message, false);
@@ -331,15 +332,24 @@
       menu: document.getElementById('sec-menu').checked,
     };
     try {
-      // Use PUT /page with special section path
-      await api('PUT', '/page', {
-        path: dir + '/section.json',
-        md: '',
-        json: sec,
-      });
+      await api('PUT', '/section', { path: dir, json: sec });
       showStatus('Секция сохранена: ' + dir, true);
     } catch (e) {
       showStatus('Ошибка секции: ' + e.message, false);
+    }
+  }
+
+  async function loadSectionForm(dir) {
+    try {
+      const data = await api('GET', '/file?path=' + encodeURIComponent(dir + '/section.json'));
+      const sec = JSON.parse(data.content);
+      document.getElementById('sec-title').value = sec.title || '';
+      document.getElementById('sec-order').value = sec.order || 0;
+      document.getElementById('sec-menu').checked = !!sec.menu;
+    } catch {
+      document.getElementById('sec-title').value = '';
+      document.getElementById('sec-order').value = 0;
+      document.getElementById('sec-menu').checked = false;
     }
   }
 
