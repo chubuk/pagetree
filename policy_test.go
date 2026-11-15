@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/mark3labs/mcp-go/mcp"
 )
@@ -54,7 +55,7 @@ func TestValidatePolicyPaths(t *testing.T) {
 // mcpGuardCall прогоняет policyGuard с ключом в контексте.
 func mcpGuardCall(t *testing.T, key *APIKey, tool string, args map[string]any) *mcp.CallToolResult {
 	t.Helper()
-	eng := &Engine{}
+	eng := &Engine{limiter: newRateLimiter()}
 	h := eng.policyGuard(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		return mcp.NewToolResultText("ok"), nil
 	})
@@ -170,6 +171,35 @@ func TestAgentRESTPathScope(t *testing.T) {
 	}
 	if rec := do("GET", "/pages/pages/about.md", "", raw); rec.Code != http.StatusForbidden {
 		t.Errorf("GET вне префикса = %d, want 403", rec.Code)
+	}
+}
+
+// TestMCPPolicyGuardRateLimit — лимитер применяется на вызовах тулов.
+func TestMCPPolicyGuardRateLimit(t *testing.T) {
+	eng := &Engine{limiter: newRateLimiter()}
+	clock := time.Unix(1000, 0)
+	eng.limiter.now = func() time.Time { return clock }
+	h := eng.policyGuard(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		return mcp.NewToolResultText("ok"), nil
+	})
+	key := &APIKey{ID: "k1", Policy: KeyPolicy{Pages: "r", News: "r", Media: "rw"}}
+	ctx := context.WithValue(context.Background(), apiKeyContextKey, key)
+	call := func(tool string) *mcp.CallToolResult {
+		req := mcp.CallToolRequest{Params: mcp.CallToolParams{Name: tool, Arguments: map[string]any{"dir": "media", "filename": "a.jpg", "data": "x"}}}
+		res, err := h(ctx, req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return res
+	}
+	for i := 0; i < uploadBurst; i++ {
+		if res := call("upload_media"); res.IsError {
+			t.Fatalf("upload %d: %v", i+1, res.Content)
+		}
+	}
+	res := call("upload_media")
+	if !res.IsError || !strings.Contains(res.Content[0].(mcp.TextContent).Text, "превышен лимит") {
+		t.Errorf("ожидался отказ по лимиту, получено: %v", res.Content)
 	}
 }
 

@@ -61,6 +61,13 @@ func (e *Engine) policyGuard(h server.ToolHandlerFunc) server.ToolHandlerFunc {
 				return mcp.NewToolResultError(fmt.Sprintf("путь %q вне разрешённых префиксов ключа", p)), nil
 			}
 		}
+		class := "default"
+		if name == "upload_media" {
+			class = "upload"
+		}
+		if !e.limiter.allow(key.ID, class) {
+			return mcp.NewToolResultError("превышен лимит запросов, повторите позже"), nil
+		}
 		return h(ctx, req)
 	}
 }

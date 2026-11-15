@@ -33,6 +33,7 @@ type Engine struct {
 	cfg      Config
 	store    *Store
 	keystore *KeyStore
+	limiter  *rateLimiter
 	log      *slog.Logger
 }
 
@@ -59,7 +60,7 @@ func New(cfg Config) (*Engine, error) {
 			return nil, fmt.Errorf("pagetree: keystore: %w", err)
 		}
 	}
-	return &Engine{cfg: cfg, store: s, keystore: ks, log: log}, nil
+	return &Engine{cfg: cfg, store: s, keystore: ks, limiter: newRateLimiter(), log: log}, nil
 }
 
 // PageHandler — GET /pages/{path...} (public).

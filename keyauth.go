@@ -38,6 +38,15 @@ func (e *Engine) KeyAuthMW(resource string, write bool) func(http.Handler) http.
 				http.Error(w, `{"error":"недостаточно прав"}`, http.StatusForbidden)
 				return
 			}
+			// Rate limit per key (upload — отдельный строгий баucket)
+			class := "default"
+			if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/upload") {
+				class = "upload"
+			}
+			if !e.limiter.allow(key.ID, class) {
+				http.Error(w, `{"error":"превышен лимит запросов"}`, http.StatusTooManyRequests)
+				return
+			}
 			// Touch for audit
 			e.keystore.TouchKey(key.ID)
 			// Inject key into context
