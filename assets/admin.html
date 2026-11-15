@@ -8,12 +8,15 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;flex-direction:column;background:#f5f5f5}
-.topnav{background:#1a237e;padding:.5rem 1rem;display:flex;gap:.25rem;align-items:center;flex-wrap:wrap}
-.topnav a{color:rgba(255,255,255,.85);text-decoration:none;padding:.35rem .75rem;border-radius:4px;font-size:.85rem;white-space:nowrap}
-.topnav a:hover{background:rgba(255,255,255,.15);color:#fff}
-.topnav a.active{background:rgba(255,255,255,.25);color:#fff;font-weight:600}
-.topnav-brand{font-weight:700;font-size:.95rem;color:#fff!important;margin-right:.5rem}
-.topnav-sep{width:1px;height:1.25rem;background:rgba(255,255,255,.3);margin:0 .5rem}
+/* Header — как в mcp-is web/static/css/style.css:14-57 */
+.header{background:#1a1a2e;color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;gap:32px;position:sticky;top:0;z-index:100;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.header__logo{font-size:18px;font-weight:700;white-space:nowrap;color:#fff!important;text-decoration:none}
+.header__nav{display:flex;gap:4px}
+.nav-link{color:#aaa;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;transition:all 0.15s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#fff;background:rgba(255,255,255,0.1)}
+.header__user{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:14px;color:#aaa}
+.header__user .btn--sm{background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;transition:all 0.15s}
+.header__user .btn--sm:hover{background:rgba(255,255,255,0.2)}
 .toolbar{background:#fff;border-bottom:1px solid #ddd;padding:.5rem 1rem;display:flex;gap:.5rem;align-items:center}
 .toolbar button{padding:.4rem .8rem;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:.85rem}
 .toolbar button:hover{background:#f0f0f0}
@@ -77,24 +80,29 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
 </head>
 <body>
 
-<nav class="topnav">
-  <a href="/dashboard" class="topnav-brand">MCP IS</a>
-  <a href="/dashboard">Панель</a>
-  <a href="/shops">Магазины</a>
-  <a href="/ai-keys">AI-ключи</a>
-  <a href="/settings">Настройки</a>
-  <span class="topnav-sep admin-link" style="display:none"></span>
-  <a href="/admin/users" class="admin-link" style="display:none">Админ</a>
-  <a href="/admin/server" class="admin-link" style="display:none">Сервер</a>
-  <a href="/admin/backup" class="admin-link" style="display:none">Бэкапы</a>
-  <a href="/admin/email" class="admin-link" style="display:none">Почта</a>
-  <a href="/content/admin/" class="admin-link active" style="display:none">Страницы</a>
+<nav class="header">
+  <a href="/dashboard" class="header__logo">MCP IS</a>
+  <div class="header__nav">
+    <a href="/dashboard" class="nav-link">Панель</a>
+    <a href="/shops" class="nav-link">Магазины</a>
+    <a href="/ai-keys" class="nav-link">AI-ключи</a>
+    <a href="/settings" class="nav-link">Настройки</a>
+    <a href="/admin/users" class="nav-link admin-link" style="display:none">Админ</a>
+    <a href="/admin/server" class="nav-link admin-link" style="display:none">Сервер</a>
+    <a href="/admin/backup" class="nav-link admin-link" style="display:none">Бэкапы</a>
+    <a href="/admin/email" class="nav-link admin-link" style="display:none">Почта</a>
+    <a href="/content/admin/" class="nav-link admin-link active" style="display:none">Страницы</a>
+  </div>
+  <div class="header__user">
+    <span id="user-nickname"></span>
+    <button type="button" class="btn btn--sm" onclick="app.logout()">Выйти</button>
+  </div>
 </nav>
 <script>
 (function(){
   var role = localStorage.getItem('role');
   if (role === 'admin' || role === 'super_admin') {
-    document.querySelectorAll('.topnav .admin-link').forEach(function(el){
+    document.querySelectorAll('.header .admin-link').forEach(function(el){
       el.style.display = '';
     });
   }
@@ -106,6 +114,8 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
   <button onclick="app.newPage('news')">📰 Новая новость</button>
   <span class="sep"></span>
   <button class="primary" onclick="app.savePage()">💾 Сохранить</button>
+  <button onclick="app.downloadMD()" title="Скачать страницу как .md">⬇ .md</button>
+  <button onclick="app.uploadMD()" title="Загрузить .md в редактор">⬆ .md</button>
   <button onclick="app.deletePage()">🗑 Удалить</button>
   <button onclick="app.renamePage()">✏ Переименовать</button>
   <span class="sep"></span>

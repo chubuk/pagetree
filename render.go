@@ -242,7 +242,7 @@ func sanitizeHTML(input string) string {
 	}
 	// Allowed URL schemes
 	allowedSchemes := map[string]bool{
-		"https": true, "http": true, "/": true,
+		"https": true, "http": true, "/": true, "mailto": true,
 	}
 
 	var out strings.Builder

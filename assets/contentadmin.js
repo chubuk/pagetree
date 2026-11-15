@@ -59,9 +59,17 @@
         accept: 'image/*',
         fieldName: 'file',
         extraData: { dir: 'media' },
+        // Vditor шлёт свой XHR без общего api() — JWT нужно передавать явно
+        headers: { Authorization: 'Bearer ' + (localStorage.getItem('token') || '') },
         format(files, response) {
+          // Vditor требует форму {data:{errFiles,succMap}} — иначе Object.keys(undefined)
           const r = JSON.parse(response);
-          return JSON.stringify({ code: 0, data: { originalURL: r.url, url: r.url } });
+          const name = files[0] ? files[0].name : 'file';
+          return JSON.stringify({
+            code: 0,
+            msg: '',
+            data: { errFiles: [], succMap: { [name]: r.url } },
+          });
         },
         error(msg) {
           showStatus('Ошибка загрузки: ' + msg, false);
@@ -481,6 +489,46 @@
     window.open(url, '_blank');
   }
 
+  // --- Session / export-import ---
+  function logout() {
+    // Конвенция mcp-is API.clearSession(): все ключи сессии + следы имперсонации
+    ['token', 'nickname', 'role', 'user_id', 'impersonating', 'admin_token', 'admin_user_id', 'admin_nickname', 'admin_role']
+      .forEach((k) => localStorage.removeItem(k));
+    sessionStorage.removeItem('return_to');
+    sessionStorage.removeItem('autologin_retry');
+    window.location.href = '/login';
+  }
+
+  function downloadMD() {
+    if (!currentPath) {
+      showStatus('Нет открытой страницы', false);
+      return;
+    }
+    const md = vditor.getValue();
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = currentPath.split('/').pop();
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function uploadMD() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.md';
+    input.onchange = () => {
+      const file = input.files[0];
+      if (!file) return;
+      file.text().then((text) => {
+        vditor.setValue(text);
+        markDirty();
+        showStatus('Загружено: ' + file.name + ' — сохраните страницу', true);
+      });
+    };
+    input.click();
+  }
+
   // --- Dirty tracking ---
   let dirty = false;
   function markDirty() {
@@ -499,6 +547,7 @@
   function init() {
     initEditor();
     loadTree();
+    document.getElementById('user-nickname').textContent = localStorage.getItem('nickname') || '';
     // SEO input listeners
     ['seo-title', 'seo-desc'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {
@@ -516,6 +565,7 @@
     savePage, newPage, deletePage, renamePage, renameEntry, deleteEntry,
     saveSection, openMedia, closeMedia, uploadMedia, deleteMedia, filterMedia,
     openImageDialog, closeImageDialog, applyImageProps, preview,
+    logout, downloadMD, uploadMD,
   };
 
   if (document.readyState === 'loading') {

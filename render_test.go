@@ -14,6 +14,7 @@ func TestSanitizeHTMLBasic(t *testing.T) {
 		{`<div onmouseover="alert(1)">x</div>`, `<div>x</div>`},
 		{`<iframe src="...">`, ``},
 		{`<img src="//evil.com/x.jpg">`, `<img>`},
+		{`<a href="mailto:x@example.com">mail</a>`, `<a href="mailto:x@example.com">mail</a>`},
 	}
 	for _, tt := range tests {
 		got := sanitizeHTML(tt.input)
