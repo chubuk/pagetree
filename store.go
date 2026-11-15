@@ -197,6 +197,26 @@ func defaultTitle(md []byte, rel string) string {
 }
 
 // WritePage atomically writes .md and sidecar .json.
+// ensureSectionDirs создаёт section.json в новых подкаталогах (категориях/подкатегориях) —
+// чтобы секция сразу была описана и редактировалась в админке. Корни (pages/news) не трогает.
+// Best-effort: неудача записи не отменяет сохранение страницы.
+func (s *Store) ensureSectionDirs(rel string) {
+	dir := filepath.ToSlash(filepath.Dir(rel))
+	parts := strings.Split(dir, "/")
+	for i := 2; i <= len(parts); i++ {
+		sub := strings.Join(parts[:i], "/")
+		p := filepath.Join(s.root, filepath.FromSlash(sub), "section.json")
+		if _, err := os.Stat(p); err == nil {
+			continue
+		}
+		jd, err := json.MarshalIndent(SectionMeta{Title: parts[i-1], Menu: true}, "", "  ")
+		if err != nil {
+			continue
+		}
+		_ = atomicWrite(p, append(jd, '\n'), 0o644)
+	}
+}
+
 func (s *Store) WritePage(rel string, md []byte, meta *PageMeta) error {
 	rel, err := s.guard(rel)
 	if err != nil {
@@ -209,6 +229,7 @@ func (s *Store) WritePage(rel string, md []byte, meta *PageMeta) error {
 	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
+	s.ensureSectionDirs(rel)
 	// Write .md atomically
 	if err := atomicWrite(abs, md, 0o644); err != nil {
 		return fmt.Errorf("write md: %w", err)
@@ -262,6 +283,7 @@ func (s *Store) RenamePage(oldRel, newRel string) error {
 	if err := os.MkdirAll(filepath.Dir(newAbs), 0o755); err != nil {
 		return fmt.Errorf("mkdir: %w", err)
 	}
+	s.ensureSectionDirs(newRel)
 	// Move .md
 	if err := os.Rename(oldAbs, newAbs); err != nil {
 		return fmt.Errorf("rename md: %w", err)

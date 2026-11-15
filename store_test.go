@@ -21,6 +21,40 @@ func newTestStore(t *testing.T) *Store {
 	return s
 }
 
+// TestWritePageCreatesSectionJSON: новые категории/подкатегории получают section.json,
+// существующий файл не перезаписывается, корни (pages/news) не трогаются.
+func TestWritePageCreatesSectionJSON(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.WritePage("pages/cat1/sub/page.md", []byte("# x\n"), &PageMeta{Title: "x"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{"pages/cat1", "pages/cat1/sub"} {
+		sec, err := s.ReadSection(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := filepath.Base(dir)
+		if sec.Title != want || !sec.Menu {
+			t.Errorf("section %s = %+v, want title %q menu true", dir, sec, want)
+		}
+	}
+	// Существующий section.json не перезаписывается
+	if err := s.WriteSection("pages/cat1", &SectionMeta{Title: "Категория", Order: 3}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.WritePage("pages/cat1/another.md", []byte("# y\n"), &PageMeta{Title: "y"}); err != nil {
+		t.Fatal(err)
+	}
+	sec, _ := s.ReadSection("pages/cat1")
+	if sec.Title != "Категория" || sec.Order != 3 || sec.Menu {
+		t.Errorf("existing section overwritten: %+v", sec)
+	}
+	// Корень не трогаем
+	if _, err := os.Stat(filepath.Join(s.root, "pages", "section.json")); err == nil {
+		t.Error("root pages/section.json should not be auto-created")
+	}
+}
+
 func TestPathToURL(t *testing.T) {
 	s := newTestStore(t)
 	tests := []struct{ path, want string }{
