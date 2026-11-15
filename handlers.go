@@ -33,6 +33,11 @@ func (e *Engine) pageHandler() http.Handler {
 		}
 		pagePath, err := e.store.resolveURL("/pages/" + rel)
 		if err != nil {
+			// Нет страницы — но каталог с страницами существует → листинг секции
+			if tree, _ := e.store.ListTree("pages/" + rel); len(tree) > 0 {
+				e.servePageListing(w, r, "pages/"+rel)
+				return
+			}
 			e.serve404(w, r)
 			return
 		}
@@ -211,11 +216,17 @@ func (e *Engine) servePageListing(w http.ResponseWriter, r *http.Request, root s
 	}
 	paged := items[start:end]
 
+	sec, _ := e.store.ReadSection(root)
+	title := sec.Title
+	if title == "" {
+		title = "Страницы"
+	}
+
 	var b strings.Builder
-	b.WriteString(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Страницы</title>
+	fmt.Fprintf(&b, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>%s</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:1rem}
-.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}</style></head><body>`)
-	b.WriteString(`<h1>Страницы</h1><ul>`)
+.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}</style></head><body>`, title)
+	fmt.Fprintf(&b, `<h1>%s</h1><ul>`, title)
 	for _, item := range paged {
 		fmt.Fprintf(&b, `<li><a href="%s">%s</a></li>`, item.URL, item.Title)
 	}

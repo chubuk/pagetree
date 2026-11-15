@@ -2,6 +2,7 @@ package pagetree
 
 import (
 	"encoding/json"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -145,6 +146,59 @@ func TestSmokeRoundTrip(t *testing.T) {
 	// Check policy
 	if !CheckPolicy(key.Policy, "pages", true) {
 		t.Error("policy should allow pages write")
+	}
+}
+
+// TestSectionListingAndBreadcrumbs: /pages/<dir> без index.md даёт листинг секции (не 404),
+// крошки берут название из section.json правильного каталога.
+func TestSectionListingAndBreadcrumbs(t *testing.T) {
+	root := t.TempDir()
+	for _, d := range []string{"pages", "news", "media"} {
+		_ = os.MkdirAll(filepath.Join(root, d), 0o755)
+	}
+	eng, err := New(Config{
+		Root:     root,
+		DataDir:  t.TempDir(),
+		SiteURL:  "https://test.ru",
+		Renderer: &stubRenderer{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := eng.store.WritePage("pages/docs/guide.md", []byte("# Guide\n"), &PageMeta{Title: "Руководство"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := eng.store.WriteSection("pages/docs", &SectionMeta{Title: "Документация"}); err != nil {
+		t.Fatal(err)
+	}
+
+	h := eng.PageHandler()
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest("GET", "/pages/docs", nil))
+	if rec.Code != 200 {
+		t.Fatalf("GET /pages/docs = %d, want 200 (section listing)", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Документация") || !strings.Contains(body, "/pages/docs/guide") {
+		t.Errorf("listing should show section title and page link, got: %.200s", body)
+	}
+
+	p, err := eng.store.ReadPage("pages/docs/guide.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	crumbs := eng.buildBreadcrumbs(p)
+	if len(crumbs) != 4 {
+		t.Fatalf("crumbs = %+v, want 4 (Главная / pages / Документация / Руководство)", crumbs)
+	}
+	if crumbs[2].Name != "Документация" || crumbs[2].URL != "/pages/docs" {
+		t.Errorf("section crumb = %+v, want {Документация /pages/docs}", crumbs[2])
+	}
+
+	rec404 := httptest.NewRecorder()
+	h.ServeHTTP(rec404, httptest.NewRequest("GET", "/pages/nope", nil))
+	if rec404.Code != 404 {
+		t.Errorf("GET /pages/nope = %d, want 404", rec404.Code)
 	}
 }
 

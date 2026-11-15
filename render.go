@@ -145,10 +145,7 @@ func (e *Engine) renderPage(p *Page) ([]byte, error) {
 // buildBreadcrumbs generates the trail from URL path.
 func (e *Engine) buildBreadcrumbs(p *Page) []Breadcrumb {
 	crumbs := []Breadcrumb{{Name: "Главная", URL: "/"}}
-	parts := strings.Split(strings.Trim(p.URL, "/"), "/")
-	_ = parts // build from actual path segments
 	// Reconstruct from path: pages/docs/install → Главная / [Секция] / Заголовок
-	// For now simple: Главная / <section titles> / <page title>
 	urlPath := strings.Trim(p.URL, "/")
 	segments := strings.Split(urlPath, "/")
 	acc := ""
@@ -162,15 +159,8 @@ func (e *Engine) buildBreadcrumbs(p *Page) []Breadcrumb {
 			}
 			crumbs = append(crumbs, Breadcrumb{Name: name, URL: ""})
 		} else {
-			// Section — try section.json
-			sectionPath := "pages"
-			if strings.HasPrefix(p.Path, "news/") {
-				sectionPath = "news"
-			}
-			for _, s := range segments[:i+1] {
-				sectionPath += "/" + s
-			}
-			sec, _ := e.store.ReadSection(sectionPath)
+			// Section — section.json в каталоге, которому соответствует сегмент
+			sec, _ := e.store.ReadSection(strings.TrimPrefix(acc, "/"))
 			name := sec.Title
 			if name == "" {
 				name = seg
