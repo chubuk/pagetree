@@ -489,6 +489,20 @@
     window.open(url, '_blank');
   }
 
+  // Ник для шапки: localStorage → фолбэк из JWT-клейма (сессия может жить без ключа nickname)
+  function displayNickname() {
+    const fromLS = localStorage.getItem('nickname');
+    if (fromLS) return fromLS;
+    try {
+      const raw = (localStorage.getItem('token') || '').split('.')[1] || '';
+      const b64 = raw.replace(/-/g, '+').replace(/_/g, '/');
+      const claims = JSON.parse(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)));
+      return claims.nickname || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
   // --- Session / export-import ---
   function logout() {
     // Конвенция mcp-is API.clearSession(): все ключи сессии + следы имперсонации
@@ -547,7 +561,7 @@
   function init() {
     initEditor();
     loadTree();
-    document.getElementById('user-nickname').textContent = localStorage.getItem('nickname') || '';
+    document.getElementById('user-nickname').textContent = displayNickname();
     // SEO input listeners
     ['seo-title', 'seo-desc'].forEach(id => {
       document.getElementById(id).addEventListener('input', () => {

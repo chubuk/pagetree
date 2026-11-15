@@ -170,6 +170,9 @@ func TestAdminUIHandlerServes(t *testing.T) {
 	if rec2.Code != 200 {
 		t.Errorf("GET /content/admin/contentadmin.js = %d, want 200", rec2.Code)
 	}
+	if cc := rec2.Header().Get("Cache-Control"); cc != "no-cache" {
+		t.Errorf("contentadmin.js Cache-Control = %q, want no-cache (stale JS after deploy)", cc)
+	}
 
 	// Test Vditor CSS (subdirectory)
 	req3 := httptest.NewRequest("GET", "/content/admin/vditor/index.css", nil)

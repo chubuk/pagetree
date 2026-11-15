@@ -356,6 +356,8 @@ func (e *Engine) adminUIHandler() http.Handler {
 		if path == "/" || path == "" || path == "/index.html" {
 			data, _ := assetsFS.ReadFile("assets/admin.html")
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			// Shell меняется при деплое — иначе браузер показывает новый HTML со старым JS
+			w.Header().Set("Cache-Control", "no-cache")
 			_, _ = w.Write(data)
 			return
 		}
@@ -376,7 +378,12 @@ func (e *Engine) adminUIHandler() http.Handler {
 		default:
 			w.Header().Set("Content-Type", "application/octet-stream")
 		}
-		w.Header().Set("Cache-Control", "public, max-age=3600")
+		// Приложение меняется при деплое; вендор (vditor) кэшируем
+		if path == "/contentadmin.js" {
+			w.Header().Set("Cache-Control", "no-cache")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=3600")
+		}
 		_, _ = w.Write(data)
 	}))
 	return sub
