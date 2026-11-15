@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PageTree — Ключи и доступы</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f5f5f5;min-height:100vh;display:flex;flex-direction:column}
+/* Header — как в admin.html */
+.header{background:#1a1a2e;color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;gap:32px;position:sticky;top:0;z-index:100;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.header__logo{font-size:18px;font-weight:700;white-space:nowrap;color:#fff!important;text-decoration:none}
+.header__nav{display:flex;gap:4px}
+.nav-link{color:#aaa;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;transition:all 0.15s;white-space:nowrap}
+.nav-link:hover,.nav-link.active{color:#fff;background:rgba(255,255,255,0.1)}
+.header__user{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:14px;color:#aaa}
+.header__user .btn--sm{background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;transition:all 0.15s}
+.header__user .btn--sm:hover{background:rgba(255,255,255,0.2)}
+.wrap{max-width:960px;width:100%;margin:0 auto;padding:24px 16px}
+h1{font-size:1.3rem;margin-bottom:16px}
+.card{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:16px}
+.card h2{font-size:1.05rem;margin-bottom:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:.78rem;color:#666;margin-bottom:4px;font-weight:600}
+.field input[type="text"],.field select{width:100%;padding:.45rem;border:1px solid #ccc;border-radius:4px;font-size:.88rem}
+.row{display:flex;gap:8px;align-items:center}
+.row .field{flex:1;margin-bottom:0}
+.grid3{display:flex;gap:8px}
+.grid3 .field{flex:1}
+button{padding:.45rem .9rem;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:.85rem}
+button:hover{background:#f0f0f0}
+button.primary{background:#1976d2;color:#fff;border-color:#1976d2}
+button.primary:hover{background:#1565c0}
+code{background:#f5f5f5;padding:1px 5px;border-radius:3px;font-size:.82rem}
+pre{background:#f9f9f9;border:1px solid #ddd;border-radius:4px;padding:12px;overflow-x:auto;font-size:.82rem;line-height:1.5}
+pre code{background:0;padding:0}
+.key-created{display:none;background:#f6f9ff;border:1px solid #c9d8f0;border-radius:6px;padding:12px;margin-bottom:12px}
+.key-created .warn{color:#8a6d3b;font-size:.82rem;margin:6px 0}
+.key-item{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #eee;flex-wrap:wrap}
+.key-item:last-child{border-bottom:0}
+.key-item .meta{color:#666;font-size:.82rem}
+.key-item .actions{margin-left:auto;display:flex;gap:4px}
+.hint{font-size:.82rem;color:#666;margin-top:10px}
+.status{padding:.5rem 1rem;font-size:.85rem;border-radius:4px;display:none;margin-bottom:12px}
+.status.ok{display:block;background:#e8f5e9;color:#2e7d32}
+.status.err{display:block;background:#ffebee;color:#c62828}
+.endpoint-row{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.endpoint-row input{flex:1;padding:.45rem;border:1px solid #ccc;border-radius:4px;font-family:monospace;font-size:.82rem;background:#fafafa}
+</style>
+</head>
+<body>
+
+<nav class="header">
+  <a href="/dashboard" class="header__logo">MCP IS</a>
+  <div class="header__nav">
+    <a href="/dashboard" class="nav-link">Панель</a>
+    <a href="/shops" class="nav-link">Магазины</a>
+    <a href="/ai-keys" class="nav-link">AI-ключи</a>
+    <a href="/settings" class="nav-link">Настройки</a>
+    <a href="/admin/users" class="nav-link admin-link" style="display:none">Админ</a>
+    <a href="/admin/server" class="nav-link admin-link" style="display:none">Сервер</a>
+    <a href="/admin/backup" class="nav-link admin-link" style="display:none">Бэкапы</a>
+    <a href="/admin/email" class="nav-link admin-link" style="display:none">Почта</a>
+    <a href="/content/admin/" class="nav-link admin-link" style="display:none">Страницы</a>
+    <a href="/content/admin/keys.html" class="nav-link admin-link active" style="display:none">Ключи и доступы</a>
+  </div>
+  <div class="header__user">
+    <span id="user-nickname"></span>
+    <button class="btn--sm" onclick="app.logout()">Выйти</button>
+  </div>
+</nav>
+<script>
+(function(){
+  var role = localStorage.getItem('role');
+  if (role === 'admin' || role === 'super_admin') {
+    document.querySelectorAll('.header .admin-link').forEach(function(el){
+      el.style.display = '';
+    });
+  }
+})();
+</script>
+
+<div class="wrap">
+  <h1>Ключи и доступы (PageTree)</h1>
+  <div class="status" id="status"></div>
+
+  <div class="card">
+    <h2>Адреса для агентов</h2>
+    <div class="endpoint-row">
+      <input type="text" id="ep-rest" readonly>
+      <button onclick="app.copyField('ep-rest')">Копировать</button>
+    </div>
+    <div class="endpoint-row">
+      <input type="text" id="ep-mcp" readonly>
+      <button onclick="app.copyField('ep-mcp')">Копировать</button>
+    </div>
+    <div class="hint">REST API (Bearer ptk_* ключ) и MCP-эндпоинт для подключения ИИ-агентов.</div>
+  </div>
+
+  <div class="card">
+    <h2>Новый ключ</h2>
+    <div class="field">
+      <label>Имя ключа</label>
+      <div class="row">
+        <input type="text" id="key-name" placeholder="например, ai-agent-blog">
+        <button class="primary" id="key-submit" onclick="app.createKey()">Создать</button>
+      </div>
+    </div>
+    <div class="grid3">
+      <div class="field"><label>Страницы</label>
+        <select id="key-pages"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
+      </div>
+      <div class="field"><label>Новости</label>
+        <select id="key-news"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
+      </div>
+      <div class="field"><label>Медиа</label>
+        <select id="key-media"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
+      </div>
+    </div>
+    <div class="field" style="margin-top:12px">
+      <label>Ограничение путей (префиксы через запятую, пусто = всё)</label>
+      <input type="text" id="key-paths" placeholder="pages/blog/, news/">
+    </div>
+    <div class="key-created" id="key-created">
+      <b>Ключ создан — сохраните его, повторно не показывается:</b>
+      <div class="row" style="margin-top:8px">
+        <input type="text" id="key-raw" readonly style="flex:1;font-family:monospace">
+        <button onclick="app.copyField('key-raw')">Копировать</button>
+      </div>
+      <div class="warn">Raw-ключ виден только сейчас — сразу скачайте конфиг или .env.</div>
+    </div>
+  </div>
+
+  <div class="card" id="config-card">
+    <h2>Пример подключения</h2>
+    <div class="field">
+      <label>Агент / харнесс</label>
+      <select id="client-type" onchange="app.renderConfig()"><option value="">— Выберите —</option></select>
+    </div>
+    <div class="hint" id="config-file-hint"></div>
+    <pre id="config-pre" style="display:none"><code id="config-code"></code></pre>
+    <div class="row" style="margin-top:8px">
+      <button onclick="app.copyConfig()">📋 Копировать</button>
+      <button id="config-download" onclick="app.downloadConfig()">💾 Скачать файл</button>
+      <button onclick="app.downloadEnv()">💾 Скачать .env</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Ключи</h2>
+    <div id="keys-list"></div>
+    <div class="hint">Куда класть файлы: общие картинки — в <code>media/</code> (URL <code>/media/имя.jpg</code>),
+      вложения страницы — в <code>about_media/</code> рядом со страницей. Форматы: jpg/png/webp/gif, до 20 МБ.</div>
+  </div>
+</div>
+
+<script src="keys.js"></script>
+</body>
+</html>

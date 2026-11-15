@@ -96,7 +96,7 @@ func argPaths(args map[string]any) []string {
 // AgentMCPHandler returns an http.Handler serving the MCP endpoint.
 // Auth (Bearer ptk_*) is applied via KeyAuthMW at the call site.
 func (e *Engine) AgentMCPHandler() http.Handler {
-	s := server.NewMCPServer("pagetree", "0.2.1",
+	s := server.NewMCPServer("pagetree", "0.3.0",
 		server.WithToolCapabilities(true),
 		server.WithRecovery(),
 	)

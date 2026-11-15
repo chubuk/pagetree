@@ -92,6 +92,7 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
     <a href="/admin/backup" class="nav-link admin-link" style="display:none">Бэкапы</a>
     <a href="/admin/email" class="nav-link admin-link" style="display:none">Почта</a>
     <a href="/content/admin/" class="nav-link admin-link active" style="display:none">Страницы</a>
+    <a href="/content/admin/keys.html" class="nav-link admin-link" style="display:none">Ключи и доступы</a>
   </div>
   <div class="header__user">
     <span id="user-nickname"></span>
@@ -123,7 +124,6 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
   <button onclick="app.openImageDialog()">⚙ Свойства картинки</button>
   <span class="sep"></span>
   <button onclick="app.preview()">👁 Просмотр</button>
-  <button onclick="app.openKeys()">🔑 Ключи и доступы</button>
   <span id="file-label" style="margin-left:auto;font-size:.85rem;color:#666"></span>
 </div>
 
@@ -274,55 +274,6 @@ body{font-family:system-ui,-apple-system,sans-serif;height:100vh;display:flex;fl
         <input type="text" id="img-alt" placeholder="Описание картинки">
       </div>
       <button class="primary" onclick="app.applyImageProps()" style="width:100%">Применить</button>
-    </div>
-  </div>
-</div>
-
-<!-- Keys & access modal -->
-<div class="modal-overlay" id="keys-modal">
-  <div class="modal" style="max-width:720px">
-    <div class="modal-header">
-      <h2>Ключи и доступы</h2>
-      <button onclick="app.closeKeys()" style="border:0;background:0;font-size:1.2rem;cursor:pointer">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="field">
-        <label>Имя ключа</label>
-        <div class="row" style="display:flex;gap:8px">
-          <input type="text" id="key-name" placeholder="например, ai-agent-blog" style="flex:1">
-          <button class="primary" id="key-submit" onclick="app.createKey()">Создать</button>
-        </div>
-      </div>
-      <div class="row" style="display:flex;gap:8px">
-        <div class="field" style="flex:1"><label>Страницы</label>
-          <select id="key-pages"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
-        </div>
-        <div class="field" style="flex:1"><label>Новости</label>
-          <select id="key-news"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
-        </div>
-        <div class="field" style="flex:1"><label>Медиа</label>
-          <select id="key-media"><option value="none">нет</option><option value="r">чтение</option><option value="w">запись</option><option value="rw" selected>чтение+запись</option></select>
-        </div>
-      </div>
-      <div class="field">
-        <label>Ограничение путей (префиксы через запятую, пусто = всё)</label>
-        <input type="text" id="key-paths" placeholder="pages/blog/, news/">
-      </div>
-      <div id="key-created" style="display:none;background:#f6f9ff;border:1px solid #c9d8f0;border-radius:6px;padding:10px;margin:10px 0">
-        <label>Ключ создан — сохраните его, повторно не показывается:</label>
-        <div class="row" style="display:flex;gap:8px">
-          <input type="text" id="key-raw" readonly style="flex:1;font-family:monospace">
-          <button onclick="app.copyKey()">Копировать</button>
-        </div>
-      </div>
-      <h3 style="margin-top:16px">Ключи</h3>
-      <div id="keys-list"></div>
-      <p style="font-size:.85rem;color:#666;margin-top:14px">
-        Куда класть файлы: общие картинки — в <code>media/</code> (URL <code>/media/имя.jpg</code>),
-        вложения страницы — в <code>_media/</code> рядом со страницей.
-        Форматы: jpg/png/webp/gif, до 20&nbsp;МБ. Адреса API: REST <code>/api/agent/v1/</code>, MCP <code>/api/agent/mcp</code>
-        (Bearer-ключ).
-      </p>
     </div>
   </div>
 </div>

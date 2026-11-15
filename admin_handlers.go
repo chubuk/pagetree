@@ -310,12 +310,18 @@ func (e *Engine) adminRenameMedia(w http.ResponseWriter, r *http.Request) {
 func (e *Engine) keysAPI() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", e.adminListKeys)
+	mux.HandleFunc("GET /client-types", e.adminClientTypes)
 	mux.HandleFunc("POST /", e.adminCreateKey)
 	mux.HandleFunc("GET /{id}", e.adminGetKey)
 	mux.HandleFunc("PUT /{id}", e.adminUpdateKey)
 	mux.HandleFunc("POST /{id}/revoke", e.adminRevokeKey)
 	mux.HandleFunc("DELETE /{id}", e.adminDeleteKey)
 	return mux
+}
+
+// adminClientTypes returns static MCP client config templates (no DB).
+func (e *Engine) adminClientTypes(w http.ResponseWriter, r *http.Request) {
+	jsonOK(w, GetClientTypes())
 }
 
 // adminListKeys returns all keys.
@@ -471,11 +477,11 @@ func (e *Engine) adminUIHandler() http.Handler {
 		default:
 			w.Header().Set("Content-Type", "application/octet-stream")
 		}
-		// Приложение меняется при деплое; вендор (vditor) кэшируем
-		if path == "/contentadmin.js" {
-			w.Header().Set("Cache-Control", "no-cache")
-		} else {
+		// Приложение меняется при деплое — no-cache; вендор (vditor) кэшируем
+		if strings.HasPrefix(path, "/vditor/") {
 			w.Header().Set("Cache-Control", "public, max-age=3600")
+		} else {
+			w.Header().Set("Cache-Control", "no-cache")
 		}
 		_, _ = w.Write(data)
 	}))

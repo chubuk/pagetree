@@ -70,9 +70,12 @@ Scope ключа (`pages`/`news`/`media` × `r`/`rw`/`w`/`none`) проверя�
 
 ## Keys API (JWT + роль admin/super_admin)
 
+UI управления ключами — страница `/content/admin/keys.html` (пункт меню «Ключи и доступы»): создание/редактирование/отзыв ключей, адреса REST/MCP, примеры конфигов MCP-клиентов и экспорт `.env`.
+
 | Метод | Путь | Описание |
 |---|---|---|
 | GET | `/api/admin/content/keys` | Список ключей (без raw) |
+| GET | `/api/admin/content/keys/client-types` | Шаблоны конфигов MCP-клиентов (статические, без БД) |
 | POST | `/api/admin/content/keys` | Создать (raw показывается один раз) |
 | GET | `/api/admin/content/keys/{id}` | Получить |
 | PUT | `/api/admin/content/keys/{id}` | Обновить имя/policy (включая `paths`) |

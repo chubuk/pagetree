@@ -19,6 +19,8 @@ curl -X POST https://your-site.ru/api/agent/mcp \
 
 ## Конфигурация MCP-клиента
 
+Готовые конфиги для 10 клиентов (Claude Desktop, Cursor, VS Code, MiMoCode, OpenCode, LibreChat, Open WebUI, Cline, Cherry Studio, Continue) генерируются в админке на странице «Ключи и доступы» (`/content/admin/keys.html`): выбор агента → текст конфига → «Скачать файл» или «Скачать .env» (адреса REST/MCP + ключ). Ниже — пример вручную.
+
 ### Claude Desktop (`claude_desktop_config.json`)
 
 ```json

@@ -181,4 +181,20 @@ func TestAdminUIHandlerServes(t *testing.T) {
 	if rec3.Code != 200 {
 		t.Errorf("GET /content/admin/vditor/index.css = %d, want 200", rec3.Code)
 	}
+	if cc := rec3.Header().Get("Cache-Control"); cc != "public, max-age=3600" {
+		t.Errorf("vditor CSS Cache-Control = %q, want max-age=3600", cc)
+	}
+
+	// Keys page + script: 200 + no-cache (неузкая ветка — всё кроме vditor/ без кэша)
+	for _, p := range []string{"/content/admin/keys.html", "/content/admin/keys.js"} {
+		req := httptest.NewRequest("GET", p, nil)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if rec.Code != 200 {
+			t.Errorf("GET %s = %d, want 200", p, rec.Code)
+		}
+		if cc := rec.Header().Get("Cache-Control"); cc != "no-cache" {
+			t.Errorf("%s Cache-Control = %q, want no-cache", p, cc)
+		}
+	}
 }

@@ -106,7 +106,7 @@ key, raw, _ := engine.KeyStore().GenerateKey("agent", pagetree.KeyPolicy{
 // raw = "ptk_live_<64hex>" — save it, can't retrieve later
 ```
 
-Format: `ptk_live_<64hex>`. Stored as SHA-256 hash. Optional AES-256-GCM encryption of `keys.json`. Policy (scope + path scope) is checked on every REST and MCP call; rate limit — 10 req/s per key (burst 30), uploads — 2/min. Key management lives in the admin UI ("🔑 Ключи и доступы"). See [docs/SECURITY.md](docs/SECURITY.md) (Russian)
+Format: `ptk_live_<64hex>`. Stored as SHA-256 hash. Optional AES-256-GCM encryption of `keys.json`. Policy (scope + path scope) is checked on every REST and MCP call; rate limit — 10 req/s per key (burst 30), uploads — 2/min. Key management lives on the "Ключи и доступы" page in the admin UI (`/content/admin/keys.html`, menu item after "Страницы"): create/revoke, REST/MCP endpoint URLs, ready-made configs for 10 MCP clients (Claude Desktop, Cursor, VS Code, etc.) and `.env` export. See [docs/SECURITY.md](docs/SECURITY.md) (Russian)
 
 ## MCP tools (13 operations)
 
