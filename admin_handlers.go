@@ -421,13 +421,16 @@ func (e *Engine) adminUIHandler() http.Handler {
 
 // --- JSON helpers ---
 
+// jsonOK — ответ админ-API: данные не кэшируются (админ должен видеть свежее без перезагрузки).
 func jsonOK(w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	_ = json.NewEncoder(w).Encode(data)
 }
 
 func jsonError(w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
 }

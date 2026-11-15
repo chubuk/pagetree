@@ -178,6 +178,9 @@ func TestSectionListingAndBreadcrumbs(t *testing.T) {
 	if rec.Code != 200 {
 		t.Fatalf("GET /pages/docs = %d, want 200 (section listing)", rec.Code)
 	}
+	if cc := rec.Header().Get("Cache-Control"); cc != "public, max-age=60" {
+		t.Errorf("public listing Cache-Control = %q, want public, max-age=60", cc)
+	}
 	body := rec.Body.String()
 	if !strings.Contains(body, "Документация") || !strings.Contains(body, "/pages/docs/guide") {
 		t.Errorf("listing should show section title and page link, got: %.200s", body)
@@ -209,6 +212,9 @@ func TestSectionListingAndBreadcrumbs(t *testing.T) {
 	apiH.ServeHTTP(recSec, req)
 	if recSec.Code != 200 {
 		t.Fatalf("PUT /section = %d, want 200: %s", recSec.Code, recSec.Body.String())
+	}
+	if cc := recSec.Header().Get("Cache-Control"); cc != "no-store" {
+		t.Errorf("admin API Cache-Control = %q, want no-store", cc)
 	}
 	sec, _ := eng.store.ReadSection("pages/docs")
 	if sec.Title != "Документация v2" || sec.Order != 5 || !sec.Menu {

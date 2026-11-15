@@ -57,6 +57,7 @@ func (e *Engine) pageHandler() http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		cachePublic(w)
 		_, _ = w.Write(html)
 	})
 }
@@ -96,6 +97,7 @@ func (e *Engine) newsHandler() http.Handler {
 					html, err := e.renderPage(p)
 					if err == nil {
 						w.Header().Set("Content-Type", "text/html; charset=utf-8")
+						cachePublic(w)
 						_, _ = w.Write(html)
 						return
 					}
@@ -126,8 +128,14 @@ func (e *Engine) newsHandler() http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		cachePublic(w)
 		_, _ = w.Write(html)
 	})
+}
+
+// cachePublic — публичный контент (фрон) кэшируется коротко; админ-API всегда no-store.
+func cachePublic(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "public, max-age=60")
 }
 
 // menuHandler serves GET /api/content/menu — JSON menu.
@@ -139,6 +147,7 @@ func (e *Engine) menuHandler() http.Handler {
 		}
 		menu := e.buildMenu()
 		w.Header().Set("Content-Type", "application/json")
+		cachePublic(w)
 		_ = json.NewEncoder(w).Encode(menu)
 	})
 }
@@ -234,6 +243,7 @@ func (e *Engine) servePageListing(w http.ResponseWriter, r *http.Request, root s
 	writePagination(&b, page, total, perPage)
 	b.WriteString(`</body></html>`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	cachePublic(w)
 	_, _ = w.Write([]byte(b.String()))
 }
 
@@ -286,6 +296,7 @@ article{margin-bottom:1.5rem;border-bottom:1px solid #eee;padding-bottom:1rem}</
 	writePagination(&b, page, total, perPage)
 	b.WriteString(`</body></html>`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	cachePublic(w)
 	_, _ = w.Write([]byte(b.String()))
 }
 
@@ -340,6 +351,7 @@ func (e *Engine) serveSectionListing(w http.ResponseWriter, r *http.Request, sec
 	writePagination(&b, page, total, perPage)
 	b.WriteString(`</body></html>`)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	cachePublic(w)
 	_, _ = w.Write([]byte(b.String()))
 }
 
