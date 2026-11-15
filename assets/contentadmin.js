@@ -5,7 +5,6 @@
   const API = '/api/admin/content';
   let vditor = null;
   let currentPath = null;
-  let currentRoot = 'pages';
   let mediaFiles = [];
 
   // --- Status ---
@@ -98,8 +97,12 @@
   // --- File tree ---
   async function loadTree() {
     try {
-      const tree = await api('GET', '/list?root=' + currentRoot);
-      renderTree(tree || []);
+      // Оба корня в одном дереве: иначе новости недоступны после перезагрузки
+      const [pages, news] = await Promise.all([
+        api('GET', '/list?root=pages'),
+        api('GET', '/list?root=news'),
+      ]);
+      renderTree([...(pages || []), ...(news || [])]);
     } catch (e) {
       showStatus('Ошибка загрузки дерева: ' + e.message, false);
     }
@@ -165,7 +168,6 @@
     try {
       const data = await api('GET', '/file?path=' + encodeURIComponent(path));
       currentPath = path;
-      currentRoot = path.startsWith('news/') ? 'news' : 'pages';
       vditor.setValue(data.content);
       document.getElementById('file-label').textContent = path;
       // Load sidecar
@@ -246,7 +248,6 @@
         json: { title: name, menu: false, order: 0, draft: true }
       });
       currentPath = path;
-      currentRoot = root;
       openPage(path);
       showStatus('Создано: ' + path, true);
     } catch (e) {
