@@ -66,6 +66,8 @@ REST-роуты на `/api/agent/v1/` — аналогичны admin API, но �
 | POST | `/upload` | media:write |
 | GET | `/menu` | pages:read |
 
+Scope ключа (`pages`/`news`/`media` × `r`/`rw`/`w`/`none`) проверяется на каждый запрос; дополнительно действует path-скоуп `paths` (префиксы путей) на `path`/`old_path`/`new_path`/`dir`/`filename`. Лимит: 10 req/s на ключ (burst 30), загрузки — 2/min.
+
 ## Keys API (JWT + роль admin/super_admin)
 
 | Метод | Путь | Описание |
@@ -73,8 +75,9 @@ REST-роуты на `/api/agent/v1/` — аналогичны admin API, но �
 | GET | `/api/admin/content/keys` | Список ключей (без raw) |
 | POST | `/api/admin/content/keys` | Создать (raw показывается один раз) |
 | GET | `/api/admin/content/keys/{id}` | Получить |
-| PUT | `/api/admin/content/keys/{id}` | Обновить имя/policy |
-| DELETE | `/api/admin/content/keys/{id}` | Удалить |
+| PUT | `/api/admin/content/keys/{id}` | Обновить имя/policy (включая `paths`) |
+| POST | `/api/admin/content/keys/{id}/revoke` | Отозвать (soft — запись остаётся) |
+| DELETE | `/api/admin/content/keys/{id}` | Удалить безвозвратно |
 
 ## Коды ошибок
 
@@ -85,4 +88,5 @@ REST-роуты на `/api/agent/v1/` — аналогичны admin API, но �
 | 403 | Нет прав (policy) |
 | 404 | Не найдено |
 | 413 | Файл слишком большой (>20MB) |
+| 429 | Превышен лимит запросов |
 | 500 | Внутренняя ошибка |

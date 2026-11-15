@@ -101,11 +101,12 @@ content/
 ```go
 key, raw, _ := engine.KeyStore().GenerateKey("agent", pagetree.KeyPolicy{
     Pages: "rw", News: "r", Media: "w",
+    Paths: []string{"pages/blog/", "news/"}, // опционально: path-скоуп, пусто = всё
 })
 // raw = "ptk_live_<64hex>" — сохраните, повторно получить нельзя
 ```
 
-Формат: `ptk_live_<64hex>`. Хранится как SHA-256 хэш. Опционально AES-256-GCM шифрование `keys.json`. Подробнее: [docs/SECURITY.md](docs/SECURITY.md)
+Формат: `ptk_live_<64hex>`. Хранится как SHA-256 хэш. Опционально AES-256-GCM шифрование `keys.json`. Политика (scope + path-скоуп) проверяется на каждый вызов REST и MCP; лимит — 10 req/s на ключ (burst 30), загрузки — 2/min. Управление ключами — в админке («🔑 Ключи и доступы»). Подробнее: [docs/SECURITY.md](docs/SECURITY.md)
 
 ## MCP-тулы (13 операций)
 
@@ -129,7 +130,7 @@ key, raw, _ := engine.KeyStore().GenerateKey("agent", pagetree.KeyPolicy{
 - Path guard: `filepath.Clean` + prefix check + symlink
 - Upload allowlist: `jpg/jpeg/png/webp/gif` (без HTML/SVG — предотвращает stored XSS)
 - HTML sanitizer: allowlist тегов/атрибутов, scheme allowlist для src/href
-- Ключи: `crypto/subtle.ConstantTimeCompare`, SHA-256 hash-then-store
+- Ключи: `crypto/subtle.ConstantTimeCompare`, SHA-256 hash-then-store; policy (scope + path-скоуп) и per-key rate limit — на каждый вызов
 
 ## Документация
 

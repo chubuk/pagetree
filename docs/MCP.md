@@ -125,6 +125,8 @@ curl -X POST https://your-site.ru/api/agent/mcp \
 | `media:read` | list_media |
 | `media:write` | upload_media, delete_media |
 
+Дополнительно к scope действует **path-скоуп**: `paths` в политике ключа — список префиксов путей (например, `pages/blog/`). Если список задан, вызовы с `path`/`old_path`/`new_path`/`dir` вне префиксов получают отказ. Пустой список = без ограничений.
+
 ## nginx (SSE)
 
 Для корректной работы Streamable HTTP (SSE) нужен специальный location:

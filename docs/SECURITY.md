@@ -41,11 +41,11 @@ Scheme allowlist для src/href: `https`, `http`, root-relative `/`, relative. 
 
 **Жизненный цикл:** create (raw один раз) → update (имя/policy) → revoke → delete.
 
-**Policy per key:** `pages`/`news`/`media` × `r`/`rw`/`w`/`none`. Deny побеждает. Проверка на каждый вызов.
+**Policy per key:** `pages`/`news`/`media` × `r`/`rw`/`w`/`none` + опциональный path-скоуп `paths` (список префиксов путей, пусто = всё). Проверка на каждый вызов — и в REST, и в MCP.
 
 ### Rate limiting
-- REST: per-key через nginx (отдельная зона)
-- MCP: per-key `rate_per_min` в policy (in-module)
+- In-app token bucket per ключ (REST и MCP): 10 req/s (burst 30); загрузка файлов — 2/min (burst 2)
+- Превышение: REST → 429, MCP → ошибка тула «превышен лимит запросов»
 - Upload: 20MB decoded / 32MB body-cap
 
 ### Fail-closed

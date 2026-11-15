@@ -101,11 +101,12 @@ See [docs/CONTENT.md](docs/CONTENT.md) (Russian)
 ```go
 key, raw, _ := engine.KeyStore().GenerateKey("agent", pagetree.KeyPolicy{
     Pages: "rw", News: "r", Media: "w",
+    Paths: []string{"pages/blog/", "news/"}, // optional: path scope, empty = unrestricted
 })
 // raw = "ptk_live_<64hex>" — save it, can't retrieve later
 ```
 
-Format: `ptk_live_<64hex>`. Stored as SHA-256 hash. Optional AES-256-GCM encryption of `keys.json`. See [docs/SECURITY.md](docs/SECURITY.md) (Russian)
+Format: `ptk_live_<64hex>`. Stored as SHA-256 hash. Optional AES-256-GCM encryption of `keys.json`. Policy (scope + path scope) is checked on every REST and MCP call; rate limit — 10 req/s per key (burst 30), uploads — 2/min. Key management lives in the admin UI ("🔑 Ключи и доступы"). See [docs/SECURITY.md](docs/SECURITY.md) (Russian)
 
 ## MCP tools (13 operations)
 
@@ -129,7 +130,7 @@ Auto-generated `<head>`: title, description, robots, canonical, Open Graph, Twit
 - Path guard: `filepath.Clean` + prefix check + symlink
 - Upload allowlist: `jpg/jpeg/png/webp/gif` (no HTML/SVG — prevents stored XSS)
 - HTML sanitizer: tag/attribute allowlist, scheme allowlist for src/href
-- Keys: `crypto/subtle.ConstantTimeCompare`, SHA-256 hash-then-store
+- Keys: `crypto/subtle.ConstantTimeCompare`, SHA-256 hash-then-store; policy (scope + path scope) and per-key rate limit checked on every call
 
 ## Documentation
 

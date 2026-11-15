@@ -125,6 +125,8 @@ Each tool has a scope: `pages`/`news`/`media` × `read`/`write`. Key is checked 
 | `media:read` | list_media |
 | `media:write` | upload_media, delete_media |
 
+In addition to scope, **path scope** applies: `paths` in the key policy — a list of path prefixes (e.g. `pages/blog/`). When set, calls with `path`/`old_path`/`new_path`/`dir` outside the prefixes are denied. Empty list = unrestricted.
+
 ## nginx (SSE)
 
 For Streamable HTTP (SSE) to work correctly:
