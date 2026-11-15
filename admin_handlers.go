@@ -313,6 +313,7 @@ func (e *Engine) keysAPI() http.Handler {
 	mux.HandleFunc("POST /", e.adminCreateKey)
 	mux.HandleFunc("GET /{id}", e.adminGetKey)
 	mux.HandleFunc("PUT /{id}", e.adminUpdateKey)
+	mux.HandleFunc("POST /{id}/revoke", e.adminRevokeKey)
 	mux.HandleFunc("DELETE /{id}", e.adminDeleteKey)
 	return mux
 }
@@ -390,6 +391,21 @@ func (e *Engine) adminUpdateKey(w http.ResponseWriter, r *http.Request) {
 }
 
 // adminDeleteKey revokes and deletes a key.
+// adminRevokeKey revokes a key (soft — record stays for audit).
+func (e *Engine) adminRevokeKey(w http.ResponseWriter, r *http.Request) {
+	if e.keystore == nil {
+		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)
+		return
+	}
+	id := r.PathValue("id")
+	if err := e.keystore.RevokeKey(id); err != nil {
+		jsonError(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	jsonOK(w, map[string]any{"ok": true})
+}
+
+// adminDeleteKey removes a key permanently.
 func (e *Engine) adminDeleteKey(w http.ResponseWriter, r *http.Request) {
 	if e.keystore == nil {
 		jsonError(w, "keystore не настроен", http.StatusServiceUnavailable)

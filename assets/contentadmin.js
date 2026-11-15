@@ -554,6 +554,130 @@
     input.click();
   }
 
+  // --- Keys & access ---
+  let editKeyId = null;
+
+  function keyPolicyForm() {
+    return {
+      pages: document.getElementById('key-pages').value,
+      news: document.getElementById('key-news').value,
+      media: document.getElementById('key-media').value,
+      paths: document.getElementById('key-paths').value.split(',').map(s => s.trim()).filter(Boolean),
+    };
+  }
+
+  function openKeys() {
+    editKeyId = null;
+    document.getElementById('key-submit').textContent = 'Создать';
+    document.getElementById('key-created').style.display = 'none';
+    document.getElementById('keys-modal').style.display = 'flex';
+    loadKeys();
+  }
+
+  function closeKeys() {
+    document.getElementById('keys-modal').style.display = 'none';
+    editKeyId = null;
+  }
+
+  async function loadKeys() {
+    const el = document.getElementById('keys-list');
+    try {
+      const keys = await api('GET', '/keys/');
+      if (!keys.length) {
+        el.innerHTML = '<p style="color:#888">Ключей пока нет</p>';
+        return;
+      }
+      el.innerHTML = keys.map(k => {
+        const st = k.revoked_at ? '<span style="color:#c00">отозван</span>' : '<span style="color:#080">активен</span>';
+        const last = k.last_used_at ? new Date(k.last_used_at).toLocaleString('ru') : '—';
+        const paths = (k.policy.paths || []).join(', ') || 'все пути';
+        return `<div style="display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #eee;flex-wrap:wrap">
+          <b>${esc(k.name)}</b> <code style="font-size:.8rem;color:#888">${esc(k.prefix)}…</code>
+          <span style="color:#666;font-size:.82rem">стр:${esc(k.policy.pages)} нов:${esc(k.policy.news)} мед:${esc(k.policy.media)} · ${esc(paths)} · ${st} · был: ${last}</span>
+          <span style="margin-left:auto;display:flex;gap:4px">
+            <button onclick="app.editKey('${k.id}')">Изменить</button>
+            ${k.revoked_at ? '' : `<button onclick="app.revokeKey('${k.id}')">Отозвать</button>`}
+            <button onclick="app.deleteKey('${k.id}')">Удалить</button>
+          </span>
+        </div>`;
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '';
+      showStatus('Ошибка загрузки ключей: ' + e.message, false);
+    }
+  }
+
+  async function createKey() {
+    const name = document.getElementById('key-name').value.trim();
+    if (!name) { showStatus('Укажите имя ключа', false); return; }
+    try {
+      if (editKeyId) {
+        await api('PUT', '/keys/' + editKeyId, { name, policy: keyPolicyForm() });
+        showStatus('Ключ «' + name + '» обновлён', true);
+        editKeyId = null;
+        document.getElementById('key-submit').textContent = 'Создать';
+      } else {
+        const res = await api('POST', '/keys/', { name, policy: keyPolicyForm() });
+        document.getElementById('key-raw').value = res.raw_key;
+        document.getElementById('key-created').style.display = '';
+        showStatus('Ключ создан — сохраните его', true);
+      }
+      await loadKeys();
+    } catch (e) {
+      showStatus('Ошибка: ' + e.message, false);
+    }
+  }
+
+  async function editKey(id) {
+    try {
+      const k = await api('GET', '/keys/' + id);
+      editKeyId = id;
+      document.getElementById('key-name').value = k.name;
+      document.getElementById('key-pages').value = k.policy.pages;
+      document.getElementById('key-news').value = k.policy.news;
+      document.getElementById('key-media').value = k.policy.media;
+      document.getElementById('key-paths').value = (k.policy.paths || []).join(', ');
+      document.getElementById('key-created').style.display = 'none';
+      document.getElementById('key-submit').textContent = 'Сохранить';
+      showStatus('Редактирование ключа «' + k.name + '»', true);
+    } catch (e) {
+      showStatus('Ошибка: ' + e.message, false);
+    }
+  }
+
+  async function revokeKey(id) {
+    if (!confirm('Отозвать ключ? Выдачи по нему перестанут работать.')) return;
+    try {
+      await api('POST', '/keys/' + id + '/revoke');
+      showStatus('Ключ отозван', true);
+      await loadKeys();
+    } catch (e) {
+      showStatus('Ошибка: ' + e.message, false);
+    }
+  }
+
+  async function deleteKey(id) {
+    if (!confirm('Удалить ключ безвозвратно (запись исчезнет из журнала)?')) return;
+    try {
+      await api('DELETE', '/keys/' + id);
+      showStatus('Ключ удалён', true);
+      await loadKeys();
+    } catch (e) {
+      showStatus('Ошибка: ' + e.message, false);
+    }
+  }
+
+  async function copyKey() {
+    const v = document.getElementById('key-raw').value;
+    try {
+      await navigator.clipboard.writeText(v);
+      showStatus('Скопировано', true);
+    } catch (e) {
+      document.getElementById('key-raw').select();
+      showStatus('Выделите и скопируйте вручную', false);
+    }
+  }
+
   // --- Dirty tracking ---
   let dirty = false;
   function markDirty() {
@@ -591,6 +715,7 @@
     saveSection, openMedia, closeMedia, uploadMedia, deleteMedia, filterMedia,
     openImageDialog, closeImageDialog, applyImageProps, preview,
     logout, downloadMD, uploadMD,
+    openKeys, closeKeys, createKey, editKey, revokeKey, deleteKey, copyKey,
   };
 
   if (document.readyState === 'loading') {
