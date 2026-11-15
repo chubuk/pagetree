@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"net/url"
 	"strings"
@@ -169,6 +170,24 @@ func (e *Engine) buildBreadcrumbs(p *Page) []Breadcrumb {
 		}
 	}
 	return crumbs
+}
+
+// breadcrumbsHTML рендерит навигационную цепочку (для шаблонов листингов без html/template).
+func breadcrumbsHTML(crumbs []Breadcrumb) string {
+	var b strings.Builder
+	b.WriteString(`<nav class="breadcrumbs" aria-label="Хлебные крошки">`)
+	for i, c := range crumbs {
+		if i > 0 {
+			b.WriteString(" / ")
+		}
+		if c.URL != "" {
+			fmt.Fprintf(&b, `<a href="%s">%s</a>`, html.EscapeString(c.URL), html.EscapeString(c.Name))
+		} else {
+			fmt.Fprintf(&b, `<span aria-current="page">%s</span>`, html.EscapeString(c.Name))
+		}
+	}
+	b.WriteString(`</nav>`)
+	return b.String()
 }
 
 // buildJSONLD generates structured data for the page.

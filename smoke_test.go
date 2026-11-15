@@ -185,6 +185,9 @@ func TestSectionListingAndBreadcrumbs(t *testing.T) {
 	if !strings.Contains(body, "Документация") || !strings.Contains(body, "/pages/docs/guide") {
 		t.Errorf("listing should show section title and page link, got: %.200s", body)
 	}
+	if !strings.Contains(body, `class="breadcrumbs"`) || !strings.Contains(body, `<a href="/pages">`) || !strings.Contains(body, `aria-current="page"`) {
+		t.Errorf("listing should show breadcrumbs (Главная / pages / Документация), got: %.300s", body)
+	}
 
 	p, err := eng.store.ReadPage("pages/docs/guide.md")
 	if err != nil {

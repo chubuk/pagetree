@@ -234,7 +234,10 @@ func (e *Engine) servePageListing(w http.ResponseWriter, r *http.Request, root s
 	var b strings.Builder
 	fmt.Fprintf(&b, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>%s</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:1rem}
-.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}</style></head><body>`, title)
+.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}
+nav.breadcrumbs{font-size:.85rem;margin-bottom:1rem;opacity:.7}
+nav.breadcrumbs a{color:inherit}</style></head><body>`, title)
+	b.WriteString(breadcrumbsHTML(e.buildBreadcrumbs(&Page{URL: "/" + root, Meta: PageMeta{Title: title}})))
 	fmt.Fprintf(&b, `<h1>%s</h1><ul>`, title)
 	for _, item := range paged {
 		fmt.Fprintf(&b, `<li><a href="%s">%s</a></li>`, item.URL, item.Title)
@@ -284,7 +287,10 @@ func (e *Engine) serveBlogListing(w http.ResponseWriter, r *http.Request) {
 	b.WriteString(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Новости</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:1rem}
 .pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}
+nav.breadcrumbs{font-size:.85rem;margin-bottom:1rem;opacity:.7}
+nav.breadcrumbs a{color:inherit}
 article{margin-bottom:1.5rem;border-bottom:1px solid #eee;padding-bottom:1rem}</style></head><body>`)
+	b.WriteString(breadcrumbsHTML(e.buildBreadcrumbs(&Page{URL: "/news", Meta: PageMeta{Title: "Новости"}})))
 	b.WriteString(`<h1>Новости</h1>`)
 	for _, n := range news[start:end] {
 		fmt.Fprintf(&b, `<article><h2><a href="%s">%s</a></h2>`, n.URL, n.Title)
@@ -342,7 +348,10 @@ func (e *Engine) serveSectionListing(w http.ResponseWriter, r *http.Request, sec
 	var b strings.Builder
 	fmt.Fprintf(&b, `<!DOCTYPE html><html><head><meta charset="utf-8"><title>%s</title>
 <style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:1rem}
-.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}</style></head><body>`, title)
+.pagination a{margin:0 .5rem;text-decoration:none;color:#0066cc}
+nav.breadcrumbs{font-size:.85rem;margin-bottom:1rem;opacity:.7}
+nav.breadcrumbs a{color:inherit}</style></head><body>`, title)
+	b.WriteString(breadcrumbsHTML(e.buildBreadcrumbs(&Page{URL: "/news/" + section, Meta: PageMeta{Title: title}})))
 	fmt.Fprintf(&b, `<h1>%s</h1><ul>`, title)
 	for _, n := range news[start:end] {
 		fmt.Fprintf(&b, `<li><a href="%s">%s</a> <time>%s</time></li>`, n.URL, n.Title, n.Date)
