@@ -1,0 +1,3 @@
+# runtime data (keys.json may hold key hashes / encrypted store — never commit)
+data/
+keys.json
