@@ -153,8 +153,22 @@ location = /api/agent/mcp {
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"file not found"}],"isError":true}}
 ```
 
+## Файлы и картинки (для агентов)
+
+Куда класть файлы через `upload_media` / `POST /api/agent/v1/upload`:
+
+| Назначение | `dir` | Итоговый URL | В markdown |
+|---|---|---|---|
+| Общая картинка | `media` (по умолчанию) | `/media/photo.jpg` | `![](/media/photo.jpg)` |
+| Вложение страницы | `<страница>_media`, напр. `pages/about_media` для `pages/about.md` | `/pages/about_media/photo.jpg` | `<img src="/pages/about_media/photo.jpg" width="600">` |
+
+- Форматы: jpg/jpeg/png/webp/gif; файл ≤ 20 МБ (в `data` — base64).
+- Имя файла: латиница, цифры, `._-` (загрузка санитизирует имена).
+- Каталог вложения создаётся автоматически при загрузке.
+
 ## Ограничения
 
 - Body: 32MB max (base64 + JSON overhead)
 - Decoded файл: 20MB max
 - Форматы: jpg/jpeg/png/webp/gif (upload allowlist)
+- Rate limit (per ключ): 10 req/s (burst 30); загрузка файлов — 2/min (burst 2). Превышение → `429` / ошибка тула «превышен лимит запросов».

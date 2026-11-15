@@ -153,8 +153,22 @@ Error (tool):
 {"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"file not found"}],"isError":true}}
 ```
 
+## Files and images (for agents)
+
+Where to put files via `upload_media` / `POST /api/agent/v1/upload`:
+
+| Purpose | `dir` | Resulting URL | In markdown |
+|---|---|---|---|
+| Shared image | `media` (default) | `/media/photo.jpg` | `![](/media/photo.jpg)` |
+| Page attachment | `<page>_media`, e.g. `pages/about_media` for `pages/about.md` | `/pages/about_media/photo.jpg` | `<img src="/pages/about_media/photo.jpg" width="600">` |
+
+- Formats: jpg/jpeg/png/webp/gif; file ≤ 20 MB (base64 in `data`).
+- Filenames: latin letters, digits, `._-` (upload sanitizes names).
+- Attachment directory is created automatically on upload.
+
 ## Limits
 
 - Body: 32MB max (base64 + JSON overhead)
 - Decoded file: 20MB max
 - Formats: jpg/jpeg/png/webp/gif (upload allowlist)
+- Rate limit (per key): 10 req/s (burst 30); file uploads — 2/min (burst 2). Exceeding → `429` / tool error "rate limit exceeded".

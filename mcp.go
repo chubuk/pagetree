@@ -220,10 +220,10 @@ func (e *Engine) registerMCPTools(s *server.MCPServer) {
 	), e.mcpListMedia())
 
 	add(mcp.NewTool("upload_media",
-		mcp.WithDescription("Upload a media file (jpg/jpeg/png/webp/gif). Returns the root-relative URL."),
+		mcp.WithDescription("Upload a media file (jpg/jpeg/png/webp/gif, max 20MB decoded). Returns the root-relative URL. Where to put files: dir='media' for shared images (URL /media/<name>); dir='<page>_media' for page attachments (e.g. pages/about_media for pages/about.md, URL /pages/about_media/<name>). Reference in markdown as ![](/media/photo.jpg)."),
 		mcp.WithString("filename", mcp.Required(), mcp.Description("Filename with extension, e.g. 'photo.jpg'")),
 		mcp.WithString("data", mcp.Required(), mcp.Description("File content as base64 string (max 20MB decoded)")),
-		mcp.WithString("dir", mcp.Description("Target directory (default: 'media')")),
+		mcp.WithString("dir", mcp.Description("Target directory (default: 'media'; use '<page>_media' for page attachments)")),
 		mcp.WithReadOnlyHintAnnotation(false),
 		mcp.WithDestructiveHintAnnotation(false),
 	), e.mcpUploadMedia())
